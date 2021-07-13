@@ -106,7 +106,7 @@ impl Pipeline for PathTracingPipeline {
                 vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
                 target_wait.clone(),
             )],
-            &[target_signal.clone()],
+            std::slice::from_ref(target_signal),
             Some(fence),
             render_context,
             bump,

@@ -175,13 +175,6 @@ impl CommandBuffer {
                     device.cmd_bind_index_buffer(self.handle, buffer.handle(), offset, index_type)
                 },
                 Command::BuildAccelerationStructure { infos } => unsafe {
-                    tracing::debug!("building blas");
-                    match infos[0].dst.info().level {
-                        AccelerationStructureLevel::Bottom => {
-                            tracing::debug!("building blas")
-                        }
-                        AccelerationStructureLevel::Top => tracing::debug!("building tlas"),
-                    }
                     let mut geometries = vec![];
                     let mut offsets = vec![];
 
@@ -276,13 +269,12 @@ impl CommandBuffer {
                         .map(|range| &*offsets[range][0] as *const _)
                         .collect();
 
-                    unsafe {
+
                         device.cmd_build_acceleration_structures_khr(
                             self.handle,
                             &build_infos,
                             &build_offsets,
                         )
-                    }
                 },
                 Command::TraceRays {
                     shader_binding_table,

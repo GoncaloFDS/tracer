@@ -65,6 +65,20 @@ impl<'a> Pass<'a> for RayTracingPass {
     ) -> Self::Output {
         let mut encoder = render_context.queue.create_enconder();
 
+
+        let mut as_instances = vec![];
+
+        let blas = input.blases.get(&0u8).unwrap();
+
+        as_instances.push(AccelerationStructureInstance::new(blas.device_address()));
+
+        // let output_image_view = render_context.create_image_view(ImageViewInfo::new(
+        //     self.output_image.clone(),
+        //     vk::ImageAspectFlags::COLOR,
+        // ));
+        //
+        // render_context.update_descriptor_sets(&[], &[]);
+
         encoder.pipeline_barrier(
             vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
             vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
@@ -72,12 +86,6 @@ impl<'a> Pass<'a> for RayTracingPass {
             vk::AccessFlags::ACCELERATION_STRUCTURE_READ_KHR,
             &[],
         );
-
-        let mut as_instances = vec![];
-
-        let blas = input.blases.get(&0u8).unwrap();
-
-        as_instances.push(AccelerationStructureInstance::new(blas.device_address()));
 
         let build_info = [AccelerationStructureBuildGeometryInfo {
             src: None,
@@ -94,23 +102,6 @@ impl<'a> Pass<'a> for RayTracingPass {
         encoder.build_acceleration_structure(&build_info);
 
         render_context.write_buffer(&mut self.instances_buffer, 0, &as_instances);
-
-        let output_image_view = render_context.create_image_view(ImageViewInfo::new(
-            self.output_image.clone(),
-            vk::ImageAspectFlags::COLOR,
-        ));
-
-        let write_descriptor_sets = [WriteDescriptorSet {
-            descriptor_set: &self.descriptor_set,
-            binding: 1,
-            element: 0,
-            descriptors: Descriptors::StorageImage(&[(
-                output_image_view.clone(),
-                vk::ImageLayout::GENERAL,
-            )]),
-        }];
-        render_context.update_descriptor_sets(&write_descriptor_sets, &[]);
-        drop(write_descriptor_sets);
 
         encoder.bind_ray_tracing_pipeline(&self.pipeline);
 
@@ -129,11 +120,19 @@ impl<'a> Pass<'a> for RayTracingPass {
         )];
 
         encoder.pipeline_barrier(
-            vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
+            vk::PipelineStageFlags::FRAGMENT_SHADER,
             vk::PipelineStageFlags::RAY_TRACING_SHADER_KHR,
             vk::AccessFlags::MEMORY_WRITE,
             vk::AccessFlags::MEMORY_WRITE,
             &image_barriers,
+        );
+
+        encoder.pipeline_barrier(
+            vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
+            vk::PipelineStageFlags::RAY_TRACING_SHADER_KHR,
+            vk::AccessFlags::MEMORY_WRITE,
+            vk::AccessFlags::MEMORY_WRITE,
+            &[],
         );
 
         encoder.trace_rays(&self.shader_binding_table, self.output_image.info().extent);
@@ -262,8 +261,7 @@ impl RayTracingPass {
 
         let instances_buffer = render_context.create_buffer(BufferInfo {
             align: 255,
-            size: std::mem::size_of::<[AccelerationStructureInstance; MAX_INSTANCE_COUNT as usize]>(
-            ) as _,
+            size: std::mem::size_of::<[AccelerationStructureInstance; MAX_INSTANCE_COUNT as usize]>() as _,
             usage_flags: vk::BufferUsageFlags::UNIFORM_BUFFER
                 | vk::BufferUsageFlags::STORAGE_BUFFER
                 | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR
@@ -304,7 +302,7 @@ impl RayTracingPass {
                     binding: 1,
                     element: 0,
                     descriptors: Descriptors::StorageImage(&[(
-                        output_image_view,
+                        output_image_view.clone(),
                         vk::ImageLayout::GENERAL,
                     )]),
                 },

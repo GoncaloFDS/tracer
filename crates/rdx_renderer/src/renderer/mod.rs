@@ -13,7 +13,7 @@ use crate::instance;
 use crate::physical_device::PhysicalDevice;
 use crate::pipeline::{PathTracingPipeline, Pipeline, RasterPipeline};
 use crate::render_context::RenderContext;
-use crate::resources::AccelerationStructure;
+use crate::resources::{AccelerationStructure, Buffer};
 use crate::surface::Surface;
 use crate::swapchain::Swapchain;
 use bumpalo::Bump;
@@ -37,6 +37,9 @@ pub struct Renderer {
     // raster_pipeline: RasterPipeline,
     path_tracing_pipeline: PathTracingPipeline,
     blases: HashMap<u8, AccelerationStructure>,
+    vertex_buffer: Option<Buffer>,
+    index_buffer: Option<Buffer>,
+    blas_scratch: Option<Buffer>,
     bump: Mutex<Bump>,
     instance: Arc<InstanceLoader>,
     entry: EntryLoader,
@@ -78,6 +81,7 @@ impl Renderer {
             physical_device.info().surface_capabilities.current_extent,
         );
 
+
         Renderer {
             surface,
             swapchain,
@@ -87,6 +91,9 @@ impl Renderer {
             // raster_pipeline,
             path_tracing_pipeline,
             blases,
+            vertex_buffer: None,
+            index_buffer: None,
+            blas_scratch: None,
             bump,
             instance,
             entry,
@@ -97,7 +104,6 @@ impl Renderer {
         let mut encoder = self.render_context.queue.create_enconder();
 
         if let Entry::Vacant(entry) = self.blases.entry(0) {
-            tracing::debug!("building triangle");
             let vertices = [
                 Vertex {
                     position: vec3(-0.5, -0.5, 0.0),
@@ -111,13 +117,16 @@ impl Renderer {
             ];
             let indices = [0u16, 1, 2];
             let bump = self.bump.lock();
-            let blas = build_triangle_blas(
+            let (blas, vertex, index, scratch) = build_triangle_blas(
                 &self.render_context,
                 &mut encoder,
                 &vertices,
                 &indices,
                 &bump,
             );
+            self.vertex_buffer = Some(vertex);
+            self.index_buffer = Some(index);
+            self.blas_scratch = Some(scratch);
             entry.insert(blas);
             self.render_context
                 .queue
@@ -175,7 +184,8 @@ fn build_triangle_blas<'a>(
     vertices: &[Vertex],
     indices: &[u16],
     bump: &'a Bump,
-) -> AccelerationStructure {
+) -> (AccelerationStructure, Buffer, Buffer, Buffer) {
+    tracing::debug!("building triangle");
     let vertex_count = vertices.len();
     let vertex_stride = std::mem::size_of::<Vertex>();
     let vertex_buffer_size = vertex_stride * vertex_count;
@@ -184,6 +194,7 @@ fn build_triangle_blas<'a>(
             align: 255,
             size: vertex_buffer_size as _,
             usage_flags: vk::BufferUsageFlags::VERTEX_BUFFER
+                | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR
                 | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
             allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS
                 | gpu_alloc::UsageFlags::HOST_ACCESS,
@@ -200,6 +211,7 @@ fn build_triangle_blas<'a>(
             align: 255,
             size: index_buffer_size as _,
             usage_flags: vk::BufferUsageFlags::INDEX_BUFFER
+                | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR
                 | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
             allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS
                 | gpu_alloc::UsageFlags::HOST_ACCESS,
@@ -236,7 +248,7 @@ fn build_triangle_blas<'a>(
         },
     });
 
-    let scratch_device_address = device.create_buffer(BufferInfo {
+    let scratch = device.create_buffer(BufferInfo {
         align: 255,
         size: sizes.build_scratch_size,
         usage_flags: vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
@@ -260,12 +272,12 @@ fn build_triangle_blas<'a>(
         dst: blas.clone(),
         flags: vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_TRACE_KHR,
         geometries,
-        scratch: scratch_device_address.device_address().unwrap(),
+        scratch: scratch.device_address().unwrap(),
     }]);
 
     encoder.build_acceleration_structure(build_info);
 
-    blas
+    (blas, vertex_buffer, index_buffer, scratch)
 }
 
 #[derive(Copy, Clone, Debug)]

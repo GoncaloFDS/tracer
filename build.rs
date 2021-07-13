@@ -64,7 +64,7 @@ fn handle_program_result(result: Result<Output>) {
     match result {
         Ok(output) => {
             if output.status.success() {
-                println!("Shader compilation succedeed.");
+                println!("Shader compilation succeeded.");
                 print!(
                     "stdout: {}",
                     String::from_utf8(output.stdout)
