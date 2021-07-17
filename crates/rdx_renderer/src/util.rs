@@ -1,6 +1,3 @@
-use erupt::vk;
-use erupt::vk1_0::Extent2D;
-
 pub trait Align<T> {
     fn align_up(self, value: T) -> Option<T>;
 }

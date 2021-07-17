@@ -10,7 +10,6 @@ use crate::resources::{
 };
 use crevice::internal::bytemuck::Pod;
 use erupt::vk;
-use erupt::vk1_0::PipelineBindPoint;
 use std::ops::{Deref, DerefMut, Range};
 
 pub struct Encoder<'a> {

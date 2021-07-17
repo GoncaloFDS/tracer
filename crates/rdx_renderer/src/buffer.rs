@@ -42,7 +42,7 @@ impl BufferRegion {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct DeviceAddress(pub NonZeroU64);
 
 impl DeviceAddress {

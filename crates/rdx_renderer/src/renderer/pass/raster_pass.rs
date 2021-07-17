@@ -1,4 +1,3 @@
-use crate::descriptor::{DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo};
 use crate::framebuffer::FramebufferInfo;
 use crate::image::{Image, ImageInfo, ImageViewInfo};
 use crate::pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer};
@@ -11,7 +10,6 @@ use crate::resources::{
 use crate::shader::{Shader, ShaderModuleInfo};
 use bumpalo::Bump;
 use erupt::vk;
-use erupt::vk1_0::{Extent2D, Format, PipelineStageFlags};
 use lru::LruCache;
 use smallvec::smallvec;
 
@@ -42,7 +40,7 @@ impl Pass<'_> for RasterPass {
         &mut self,
         input: Input,
         frame: u64,
-        wait: &[(PipelineStageFlags, Semaphore)],
+        wait: &[(vk::PipelineStageFlags, Semaphore)],
         signal: &[Semaphore],
         fence: Option<&Fence>,
         render_context: &mut RenderContext,

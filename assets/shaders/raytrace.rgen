@@ -1,9 +1,52 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_GOOGLE_include_directive : enable
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+#include "common/descriptors.glsl"
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT tlas;
 layout(binding = 1, set = 0, rgba32f) uniform image2D image;
+layout(binding = 2, set = 0, std430) uniform Globals {
+     Camera camera;
+    vec4 color;
+} globals;
+
+layout(location = 0) rayPayloadEXT PerRayData prd;
 
 void main() {
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(0.2, 0.2, 0.5, 1.0));
+    Camera camera = globals.camera;
+
+    const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 in_uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = in_uv * 2.0 - 1.0;
+
+    vec4 origin = camera.view_inverse * vec4(0, 0, 0, 1);
+    vec4 target = camera.proj_inverse * vec4(d.x, d.y, 1, 1);
+    vec4 direction = camera.view_inverse * vec4(normalize(target.xyz), 0);
+
+    uint ray_flags = gl_RayFlagsOpaqueEXT;
+    float t_min = 0.001;
+    float t_max = 10000.0;
+
+    traceRayEXT(
+        tlas,
+        ray_flags,
+        0xFF,
+        0,
+        0,
+        0,
+        origin.xyz,
+        t_min,
+        direction.xyz,
+        t_max,
+        0
+    );
+
+    vec4 final_color = vec4(prd.hit_color, 1.0);
+//    final_color = vec4(origin.xyz, 1.0);
+//    final_color = vec4(direction.xyz, 1.0);
+//    final_color = vec4(target.xyz, 1.0);
+//      final_color = globals.color;
+    imageStore(image, ivec2(gl_LaunchIDEXT.xy), final_color);
 }

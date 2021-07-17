@@ -2,15 +2,12 @@ use crate::acceleration_structures::AccelerationStructureInfo;
 use crate::buffer::{BufferInfo, DeviceAddress};
 use crate::descriptor::{DescriptorSetInfo, DescriptorSetLayoutInfo, DescriptorSizes};
 use crate::framebuffer::FramebufferInfo;
-use crate::image::{ImageInfo, ImageViewInfo};
 use crate::pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, RayTracingPipelineInfo};
 use crate::render_pass::RenderPassInfo;
 use crate::shader::ShaderModuleInfo;
 use erupt::vk;
 use gpu_alloc::{MemoryBlock, UsageFlags};
 use std::cell::UnsafeCell;
-use std::hash::{Hash, Hasher};
-use std::ops::Deref;
 use std::sync::Arc;
 
 struct BufferInner {

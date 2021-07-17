@@ -7,6 +7,5 @@ layout(binding = 0, set = 0) uniform sampler2D initial_image;
 
 
 void main() {
-    float gamma = 1.0 / 2.2;
-    output_color = pow(texture(initial_image, in_uv), vec4(gamma));
+    output_color = texture(initial_image, in_uv);
 }

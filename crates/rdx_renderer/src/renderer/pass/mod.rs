@@ -7,7 +7,6 @@ use crate::resources::{Fence, Semaphore};
 use erupt::vk;
 
 use bumpalo::Bump;
-use erupt::vk1_0::PipelineStageFlags;
 pub use raster_pass::*;
 
 pub trait Pass<'a> {

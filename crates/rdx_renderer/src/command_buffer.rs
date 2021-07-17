@@ -1,5 +1,5 @@
-use crate::acceleration_structures::{AccelerationStructureGeometry, AccelerationStructureLevel};
-use crate::buffer::{BufferRegion, DeviceAddress};
+use crate::acceleration_structures::AccelerationStructureGeometry;
+use crate::buffer::BufferRegion;
 use crate::device::Device;
 use crate::encoder::Command;
 use crate::render_pass::{ClearValue, DEFAULT_ATTACHMENT_COUNT};
@@ -53,7 +53,7 @@ impl CommandBuffer {
                         .info()
                         .attachments
                         .iter()
-                        .map(|attachment| {
+                        .map(|_| {
                             let clear = clears.next().unwrap();
                             match *clear {
                                 ClearValue::Color(r, g, b, a) => vk::ClearValue {
@@ -179,7 +179,6 @@ impl CommandBuffer {
                     let mut offsets = vec![];
 
                     let ranges: Vec<_> = infos.iter().map(|info| {
-                        let mut total_primitive_count = 0u64;
                         let offset = geometries.len();
 
                         for geometry in info.geometries {
@@ -195,7 +194,6 @@ impl CommandBuffer {
                                     index_data,
                                     transform_data,
                                 } => {
-                                    total_primitive_count += (*primitive_count) as u64;
                                     geometries.push(vk::AccelerationStructureGeometryKHRBuilder::new()
                                         .flags(flags.clone())
                                         .geometry_type(vk::GeometryTypeKHR::TRIANGLES_KHR)
@@ -206,10 +204,7 @@ impl CommandBuffer {
                                                 .vertex_stride(*vertex_stride)
                                                 .max_vertex(*vertex_count)
                                                 .index_type(vk::IndexType::UINT16)
-                                                .index_data(match index_data {
-                                                    None => vk::DeviceOrHostAddressConstKHR::default(),
-                                                    Some(address) => address.to_erupt(),
-                                                })
+                                                .index_data(index_data.unwrap().to_erupt())
                                                 .transform_data(transform_data.as_ref().map(|device_address| device_address.to_erupt()).unwrap_or_default())
                                                 .build()
                                         }));
@@ -269,12 +264,11 @@ impl CommandBuffer {
                         .map(|range| &*offsets[range][0] as *const _)
                         .collect();
 
-
-                        device.cmd_build_acceleration_structures_khr(
-                            self.handle,
-                            &build_infos,
-                            &build_offsets,
-                        )
+                    device.cmd_build_acceleration_structures_khr(
+                        self.handle,
+                        &build_infos,
+                        &build_offsets,
+                    )
                 },
                 Command::TraceRays {
                     shader_binding_table,

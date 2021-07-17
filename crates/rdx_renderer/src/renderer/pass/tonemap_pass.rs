@@ -3,7 +3,7 @@ use crate::descriptor::{
     Descriptors, WriteDescriptorSet,
 };
 use crate::framebuffer::FramebufferInfo;
-use crate::image::{Image, ImageInfo, ImageView, ImageViewInfo};
+use crate::image::{Image, ImageView, ImageViewInfo};
 use crate::pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer};
 use crate::render_context::RenderContext;
 use crate::render_pass::{AttachmentInfo, ClearValue, RenderPassInfo, Subpass};
@@ -13,7 +13,6 @@ use crate::resources::{
     Semaphore,
 };
 use crate::shader::{Shader, ShaderModuleInfo};
-use bevy::ecs::schedule::ShouldRun::No;
 use bumpalo::Bump;
 use erupt::vk;
 use erupt::vk::{PipelineStageFlags, ShaderStageFlags};
@@ -123,9 +122,9 @@ impl Pass<'_> for TonemapPass {
 
         encoder.set_viewport(vk::Viewport {
             x: 0.0,
-            y: 0.0,
+            y: framebuffer.info().extent.height as f32,
             width: framebuffer.info().extent.width as f32,
-            height: (framebuffer.info().extent.height as f32),
+            height: -(framebuffer.info().extent.height as f32),
             min_depth: 0.0,
             max_depth: 1.0,
         });

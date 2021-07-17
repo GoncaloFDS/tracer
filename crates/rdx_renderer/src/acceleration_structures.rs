@@ -1,9 +1,7 @@
 use crate::buffer::{BufferRegion, DeviceAddress};
 use crate::resources::AccelerationStructure;
 use crate::util::ToErupt;
-use crevice::internal::bytemuck;
 use erupt::vk;
-use glam::Mat4;
 
 #[derive(Clone)]
 pub struct AccelerationStructureInfo {
@@ -76,12 +74,76 @@ pub enum AccelerationStructureGeometry {
     },
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct TransformMatrix {
+    pub matrix: [[f32; 4]; 3],
+}
+
+impl TransformMatrix {
+    pub fn identity() -> Self {
+        TransformMatrix {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+            ],
+        }
+    }
+}
+
+impl Default for TransformMatrix {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
+pub struct InstanceCustomIndexAndMask(pub u32);
+
+impl InstanceCustomIndexAndMask {
+    pub fn new(custom_index: u32, mask: u8) -> Self {
+        assert!(custom_index < 1u32 << 24);
+
+        InstanceCustomIndexAndMask(custom_index | ((mask as u32) << 24))
+    }
+}
+
+impl Default for InstanceCustomIndexAndMask {
+    fn default() -> Self {
+        InstanceCustomIndexAndMask::new(0, !0)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 #[repr(align(16))]
 #[repr(C)]
 pub struct AccelerationStructureInstance {
-    pub transform: Mat4,
+    pub transform: TransformMatrix,
+    pub custom_index_mask: InstanceCustomIndexAndMask,
+    pub shader_binding_offset_flags: InstanceShaderBindingOffsetAndFlags,
     pub acceleration_structure_reference: DeviceAddress,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
+pub struct InstanceShaderBindingOffsetAndFlags(pub u32);
+
+impl InstanceShaderBindingOffsetAndFlags {
+    pub fn new(instance_shader_binding_offset: u32, flags: vk::GeometryInstanceFlagsKHR) -> Self {
+        assert!(instance_shader_binding_offset < 1u32 << 24);
+
+        InstanceShaderBindingOffsetAndFlags(
+            instance_shader_binding_offset | ((flags.bits() as u32) << 24),
+        )
+    }
+}
+
+impl Default for InstanceShaderBindingOffsetAndFlags {
+    fn default() -> Self {
+        InstanceShaderBindingOffsetAndFlags::new(0, vk::GeometryInstanceFlagsKHR::empty())
+    }
 }
 
 unsafe impl bytemuck::Zeroable for AccelerationStructureInstance {}
@@ -91,7 +153,19 @@ impl AccelerationStructureInstance {
     pub fn new(blas_address: DeviceAddress) -> Self {
         AccelerationStructureInstance {
             transform: Default::default(),
+            custom_index_mask: Default::default(),
+            shader_binding_offset_flags: Default::default(),
             acceleration_structure_reference: blas_address,
         }
+    }
+
+    pub fn with_transform(mut self, transform: TransformMatrix) -> Self {
+        self.transform = transform;
+        self
+    }
+
+    pub fn set_transform(&mut self, transform: TransformMatrix) -> &mut Self {
+        self.transform = transform;
+        self
     }
 }

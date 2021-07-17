@@ -4,7 +4,7 @@ use crate::pipeline::Pipeline;
 use crate::render_context::RenderContext;
 use crate::renderer::raytracing_pass::RayTracingPass;
 use crate::renderer::tonemap_pass::TonemapPass;
-use crate::renderer::{raster_pass, raytracing_pass, tonemap_pass, Pass};
+use crate::renderer::{raytracing_pass, tonemap_pass, Pass};
 use crate::resources::{AccelerationStructure, Fence, PipelineLayout, Semaphore};
 use crate::shader::Shader;
 use bumpalo::Bump;

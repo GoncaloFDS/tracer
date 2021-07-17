@@ -279,7 +279,7 @@ impl Device {
                 .memory_block()
                 .unmap(EruptMemoryDevice::wrap(self.handle()));
         }
-        buffer.into()
+        buffer
     }
 
     pub fn write_buffer<T>(&self, buffer: &mut Buffer, offset: u64, data: &[T])
@@ -433,6 +433,7 @@ impl Device {
 
         let mut ranges = SmallVec::<[_; 64]>::new();
         let mut images = SmallVec::<[_; 16]>::new();
+        let mut buffers = SmallVec::<[_; 16]>::new();
         let mut acceleration_structures = SmallVec::<[_; 64]>::new();
         let mut write_descriptor_acceleration_structures = SmallVec::<[_; 16]>::new();
 
@@ -459,10 +460,19 @@ impl Device {
                     }));
                     ranges.push(start..images.len());
                 }
-                Descriptors::UniformBuffer(_) => unimplemented!(),
-                Descriptors::StorageBuffer(_) => unimplemented!(),
-                Descriptors::UniformBufferDynamic(_) => unimplemented!(),
-                Descriptors::StorageBufferDynamic(_) => unimplemented!(),
+                Descriptors::UniformBuffer(slice)
+                | Descriptors::StorageBuffer(slice)
+                | Descriptors::UniformBufferDynamic(slice)
+                | Descriptors::StorageBufferDynamic(slice) => {
+                    let start = buffers.len();
+                    buffers.extend(slice.iter().map(|(buffer, offset, size)| {
+                        vk::DescriptorBufferInfoBuilder::new()
+                            .buffer(buffer.handle())
+                            .offset(*offset)
+                            .range(*size)
+                    }));
+                    ranges.push(start..buffers.len())
+                }
                 Descriptors::InputAttachment(_) => unimplemented!(),
                 Descriptors::AccelerationStructure(slice) => {
                     let start = acceleration_structures.len();
@@ -501,8 +511,12 @@ impl Device {
                     Descriptors::StorageImage(_) => write_builder
                         .descriptor_type(vk::DescriptorType::STORAGE_IMAGE)
                         .image_info(&images[ranges.next().unwrap()]),
-                    Descriptors::UniformBuffer(_) => unimplemented!(),
-                    Descriptors::StorageBuffer(_) => unimplemented!(),
+                    Descriptors::UniformBuffer(_) => write_builder
+                        .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+                        .buffer_info(&buffers[ranges.next().unwrap()]),
+                    Descriptors::StorageBuffer(_) => write_builder
+                        .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
+                        .buffer_info(&buffers[ranges.next().unwrap()]),
                     Descriptors::UniformBufferDynamic(_) => unimplemented!(),
                     Descriptors::StorageBufferDynamic(_) => unimplemented!(),
                     Descriptors::InputAttachment(_) => unimplemented!(),
@@ -597,15 +611,13 @@ impl Device {
         let subpass_offsets = {
             info.subpasses
                 .iter()
-                .enumerate()
-                .map(|(i, subpass)| {
+                .map(|subpass| {
                     let color_offset = subpass_attachments.len();
                     subpass_attachments.extend(
                         subpass
                             .colors
                             .iter()
-                            .enumerate()
-                            .map(|(color_i, &color)| {
+                            .map(|&color| {
                                 vk::AttachmentReferenceBuilder::new()
                                     .attachment(color as _)
                                     .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)

@@ -1,9 +1,8 @@
 use crate::resources::ShaderModule;
-use erupt::{vk, DeviceLoader};
+use erupt::vk;
 use std::env;
 use std::fs::File;
 use std::io::*;
-use std::path::Path;
 
 #[derive(Clone)]
 pub struct Shader {

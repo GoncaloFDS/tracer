@@ -1,6 +1,5 @@
 use crate::util::ToErupt;
 use erupt::vk;
-use erupt::vk1_0::Format;
 use gpu_alloc::MemoryBlock;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;

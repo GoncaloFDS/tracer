@@ -1,9 +1,9 @@
 use crate::acceleration_structures::{
     AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
     AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureInstance,
-    AccelerationStructureLevel,
+    AccelerationStructureLevel, TransformMatrix,
 };
-use crate::buffer::{BufferInfo, BufferRegion, DeviceAddress};
+use crate::buffer::{BufferInfo, BufferRegion};
 use crate::descriptor::{
     DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
     Descriptors, WriteDescriptorSet,
@@ -20,14 +20,28 @@ use crate::resources::{
     Semaphore,
 };
 use crate::shader::{Shader, ShaderModuleInfo};
-use crate::util::align_up;
+use bumpalo::collections::Vec as BVec;
 use bumpalo::Bump;
+use crevice::std430::{AsStd430, Std430};
 use erupt::vk;
-use erupt::vk1_0::{Extent2D, PipelineStageFlags};
-use glam::vec3;
+use glam::{vec3, vec4, Mat4, Vec3};
 use std::collections::HashMap;
 
 const MAX_INSTANCE_COUNT: u32 = 2048;
+
+#[derive(AsStd430)]
+pub struct Globals {
+    camera: CameraUniform,
+    color: mint::Vector4<f32>,
+}
+
+#[derive(AsStd430)]
+pub struct CameraUniform {
+    view: mint::ColumnMatrix4<f32>,
+    proj: mint::ColumnMatrix4<f32>,
+    view_inverse: mint::ColumnMatrix4<f32>,
+    proj_inverse: mint::ColumnMatrix4<f32>,
+}
 
 pub struct RayTracingPass {
     pipeline_layout: PipelineLayout,
@@ -36,6 +50,8 @@ pub struct RayTracingPass {
     tlas: AccelerationStructure,
     scratch_buffer: Buffer,
     descriptor_set: DescriptorSet,
+    globals: Globals,
+    globals_buffer: Buffer,
     instances_buffer: Buffer,
     output_image: Image,
 }
@@ -57,7 +73,7 @@ impl<'a> Pass<'a> for RayTracingPass {
         &mut self,
         input: Self::Input,
         frame: u64,
-        wait: &[(PipelineStageFlags, Semaphore)],
+        wait: &[(vk::PipelineStageFlags, Semaphore)],
         signal: &[Semaphore],
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
@@ -65,19 +81,14 @@ impl<'a> Pass<'a> for RayTracingPass {
     ) -> Self::Output {
         let mut encoder = render_context.queue.create_enconder();
 
-
-        let mut as_instances = vec![];
+        let mut as_instances = BVec::new_in(bump);
 
         let blas = input.blases.get(&0u8).unwrap();
 
-        as_instances.push(AccelerationStructureInstance::new(blas.device_address()));
-
-        // let output_image_view = render_context.create_image_view(ImageViewInfo::new(
-        //     self.output_image.clone(),
-        //     vk::ImageAspectFlags::COLOR,
-        // ));
-        //
-        // render_context.update_descriptor_sets(&[], &[]);
+        as_instances.push(
+            AccelerationStructureInstance::new(blas.device_address())
+                .with_transform(TransformMatrix::identity()),
+        );
 
         encoder.pipeline_barrier(
             vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
@@ -87,21 +98,20 @@ impl<'a> Pass<'a> for RayTracingPass {
             &[],
         );
 
-        let build_info = [AccelerationStructureBuildGeometryInfo {
+        let build_info = bump.alloc([AccelerationStructureBuildGeometryInfo {
             src: None,
             dst: self.tlas.clone(),
             flags: vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_BUILD_KHR,
-            geometries: &[AccelerationStructureGeometry::Instances {
+            geometries: bump.alloc([AccelerationStructureGeometry::Instances {
                 flags: vk::GeometryFlagsKHR::OPAQUE_KHR,
                 data: self.instances_buffer.device_address().unwrap(),
-                primitive_count: 1,
-            }],
+                primitive_count: as_instances.len() as _,
+            }]),
             scratch: self.scratch_buffer.device_address().unwrap(),
-        }];
-
-        encoder.build_acceleration_structure(&build_info);
-
+        }]);
         render_context.write_buffer(&mut self.instances_buffer, 0, &as_instances);
+
+        encoder.build_acceleration_structure(build_info);
 
         encoder.bind_ray_tracing_pipeline(&self.pipeline);
 
@@ -184,6 +194,16 @@ impl RayTracingPass {
                         stages: vk::ShaderStageFlags::RAYGEN_KHR,
                         flags: vk::DescriptorBindingFlags::empty(),
                     },
+                    // Globals
+                    DescriptorSetLayoutBinding {
+                        binding: 2,
+                        descriptor_type: DescriptorType::UniformBuffer,
+                        count: 1,
+                        stages: vk::ShaderStageFlags::RAYGEN_KHR
+                            | vk::ShaderStageFlags::CLOSEST_HIT_KHR
+                            | vk::ShaderStageFlags::MISS_KHR,
+                        flags: vk::DescriptorBindingFlags::empty(),
+                    },
                 ],
                 flags: vk::DescriptorSetLayoutCreateFlags::empty(),
             });
@@ -261,7 +281,9 @@ impl RayTracingPass {
 
         let instances_buffer = render_context.create_buffer(BufferInfo {
             align: 255,
-            size: std::mem::size_of::<[AccelerationStructureInstance; MAX_INSTANCE_COUNT as usize]>() as _,
+            size: std::mem::size_of::<
+                [vk::AccelerationStructureInstanceKHR; MAX_INSTANCE_COUNT as usize],
+            >() as _,
             usage_flags: vk::BufferUsageFlags::UNIFORM_BUFFER
                 | vk::BufferUsageFlags::STORAGE_BUFFER
                 | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR
@@ -270,6 +292,31 @@ impl RayTracingPass {
                 | gpu_alloc::UsageFlags::FAST_DEVICE_ACCESS
                 | gpu_alloc::UsageFlags::HOST_ACCESS,
         });
+
+        let mut globals_buffer = render_context.create_buffer(BufferInfo {
+            align: 255,
+            size: std::mem::size_of::<Std430Globals>() as _,
+            usage_flags: vk::BufferUsageFlags::UNIFORM_BUFFER
+                | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+            allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS
+                | gpu_alloc::UsageFlags::FAST_DEVICE_ACCESS
+                | gpu_alloc::UsageFlags::HOST_ACCESS,
+        });
+
+        let cam_pos = vec3(0.0, 1.0, -1.0);
+        let view = Mat4::look_at_rh(cam_pos, Vec3::ZERO, Vec3::Y);
+        let proj = Mat4::perspective_rh(70.0f32.to_radians(), 800.0 / 600.0, 0.001, 10000.0);
+
+        let globals = Globals {
+            color: vec4(0.8, 0.0, 0.0, 1.0).into(),
+            camera: CameraUniform {
+                view: view.into(),
+                proj: proj.into(),
+                view_inverse: view.inverse().into(),
+                proj_inverse: proj.inverse().into(),
+            },
+        };
+        render_context.write_buffer(&mut globals_buffer, 0, globals.as_std430().as_bytes());
 
         let output_image = render_context.create_image(ImageInfo {
             extent,
@@ -306,6 +353,16 @@ impl RayTracingPass {
                         vk::ImageLayout::GENERAL,
                     )]),
                 },
+                WriteDescriptorSet {
+                    descriptor_set: &descriptor_set,
+                    binding: 2,
+                    element: 0,
+                    descriptors: Descriptors::UniformBuffer(&[(
+                        globals_buffer.clone(),
+                        0,
+                        std::mem::size_of::<Std430Globals>() as _,
+                    )]),
+                },
             ],
             &[],
         );
@@ -317,6 +374,8 @@ impl RayTracingPass {
             tlas,
             scratch_buffer,
             descriptor_set,
+            globals,
+            globals_buffer,
             instances_buffer,
             output_image,
         }

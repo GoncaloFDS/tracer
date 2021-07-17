@@ -2,22 +2,22 @@ pub use self::pass::*;
 
 use crate::acceleration_structures::{
     AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
-    AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureInstance,
-    AccelerationStructureLevel,
+    AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureLevel,
 };
-use crate::buffer::{BufferInfo, BufferRegion, DeviceAddress};
+use crate::buffer::{BufferInfo, BufferRegion};
 use crate::debug::DebugMessenger;
 use crate::device::Device;
 use crate::encoder::Encoder;
 use crate::instance;
 use crate::physical_device::PhysicalDevice;
-use crate::pipeline::{PathTracingPipeline, Pipeline, RasterPipeline};
+use crate::pipeline::{PathTracingPipeline, Pipeline};
 use crate::render_context::RenderContext;
 use crate::resources::{AccelerationStructure, Buffer};
 use crate::surface::Surface;
 use crate::swapchain::Swapchain;
 use bumpalo::Bump;
 use crevice::internal::bytemuck;
+use crevice::std430::AsStd430;
 use erupt::{vk, EntryLoader, InstanceLoader};
 use glam::vec3;
 use parking_lot::Mutex;
@@ -61,7 +61,7 @@ impl Renderer {
         ];
         let physical_device = PhysicalDevice::select_one(&instance, &surface, &device_extensions);
         let (device, queue) = physical_device.create_device(instance.clone(), &device_extensions);
-        let mut render_context = RenderContext::new(device, queue);
+        let render_context = RenderContext::new(device, queue);
 
         let mut swapchain = render_context.create_swapchain(&surface);
         swapchain.configure(&render_context.device, physical_device.info());
@@ -80,7 +80,6 @@ impl Renderer {
             physical_device.info().surface_format.format,
             physical_device.info().surface_capabilities.current_extent,
         );
-
 
         Renderer {
             surface,
@@ -106,13 +105,13 @@ impl Renderer {
         if let Entry::Vacant(entry) = self.blases.entry(0) {
             let vertices = [
                 Vertex {
-                    position: vec3(-0.5, -0.5, 0.0),
+                    position: vec3(-0.5, -0.5, 0.0).into(),
                 },
                 Vertex {
-                    position: vec3(0.0, 0.5, 0.0),
+                    position: vec3(0.5, -0.5, 0.0).into(),
                 },
                 Vertex {
-                    position: vec3(0.5, -0.5, 0.0),
+                    position: vec3(0.0, 0.5, 0.0).into(),
                 },
             ];
             let indices = [0u16, 1, 2];
@@ -143,15 +142,6 @@ impl Renderer {
             self.swapchain
                 .configure(&self.render_context.device, self.physical_device.info());
         };
-
-        // self.raster_pipeline.draw(
-        //     &mut self.render_context,
-        //     swapchain_image.info().image.clone(),
-        //     &swapchain_image.info().wait,
-        //     &swapchain_image.info().signal,
-        //     &self.blases,
-        //     &self.bump.lock(),
-        // );
 
         self.path_tracing_pipeline.draw(
             &mut self.render_context,
@@ -185,9 +175,8 @@ fn build_triangle_blas<'a>(
     indices: &[u16],
     bump: &'a Bump,
 ) -> (AccelerationStructure, Buffer, Buffer, Buffer) {
-    tracing::debug!("building triangle");
     let vertex_count = vertices.len();
-    let vertex_stride = std::mem::size_of::<Vertex>();
+    let vertex_stride = std::mem::size_of::<Std430Vertex>();
     let vertex_buffer_size = vertex_stride * vertex_count;
     let vertex_buffer = device.create_buffer_with_data(
         BufferInfo {
@@ -202,7 +191,7 @@ fn build_triangle_blas<'a>(
         &vertices,
     );
 
-    let max_primitive_count = indices.len() / 3;
+    let triangle_count = indices.len() / 3;
 
     let index_count = indices.len();
     let index_buffer_size = std::mem::size_of::<u16>() * index_count;
@@ -216,7 +205,7 @@ fn build_triangle_blas<'a>(
             allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS
                 | gpu_alloc::UsageFlags::HOST_ACCESS,
         },
-        &vertices,
+        &indices,
     );
 
     //
@@ -224,8 +213,8 @@ fn build_triangle_blas<'a>(
         AccelerationStructureLevel::Bottom,
         vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_TRACE_KHR,
         &[AccelerationStructureGeometryInfo::Triangles {
-            max_primitive_count: 1,
-            max_vertex_count: 3,
+            max_primitive_count: triangle_count as _,
+            max_vertex_count: vertex_count as _,
             vertex_format: vk::Format::R32G32B32_SFLOAT,
             index_type: vk::IndexType::UINT16,
         }],
@@ -256,13 +245,13 @@ fn build_triangle_blas<'a>(
     });
 
     let geometries = bump.alloc([AccelerationStructureGeometry::Triangles {
-        flags: vk::GeometryFlagsKHR::OPAQUE_KHR,
+        flags: vk::GeometryFlagsKHR::empty(),
         vertex_format: vk::Format::R32G32B32_SFLOAT,
         vertex_data: vertex_buffer.device_address().unwrap(),
         vertex_stride: vertex_stride as _,
-        vertex_count: vertices.len() as _,
+        vertex_count: vertex_count as _,
         first_vertex: 0,
-        primitive_count: max_primitive_count as _,
+        primitive_count: triangle_count as _,
         index_data: index_buffer.device_address(),
         transform_data: None,
     }]);
@@ -280,9 +269,9 @@ fn build_triangle_blas<'a>(
     (blas, vertex_buffer, index_buffer, scratch)
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, AsStd430)]
 struct Vertex {
-    pub position: glam::Vec3,
+    pub position: mint::Vector3<f32>,
 }
 
 unsafe impl bytemuck::Pod for Vertex {}
