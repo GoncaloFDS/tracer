@@ -1,6 +1,6 @@
-use crate::image::ImageView;
-use crate::render_pass::DEFAULT_ATTACHMENT_COUNT;
-use crate::resources::RenderPass;
+use crate::render::{
+    image::ImageView, render_pass::DEFAULT_ATTACHMENT_COUNT, resources::RenderPass,
+};
 use erupt::vk;
 use smallvec::SmallVec;
 

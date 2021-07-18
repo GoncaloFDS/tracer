@@ -1,12 +1,15 @@
-use crate::buffer::BufferRegion;
-use crate::image::Image;
-use crate::pipeline::Pipeline;
-use crate::render_context::RenderContext;
-use crate::renderer::raytracing_pass::RayTracingPass;
-use crate::renderer::tonemap_pass::TonemapPass;
-use crate::renderer::{raytracing_pass, tonemap_pass, Pass};
-use crate::resources::{AccelerationStructure, Fence, PipelineLayout, Semaphore};
-use crate::shader::Shader;
+use crate::render::pass::Pass;
+use crate::render::{
+    buffer::BufferRegion,
+    image::Image,
+    pass::raytracing_pass::RayTracingPass,
+    pass::tonemap_pass::TonemapPass,
+    pass::{raytracing_pass, tonemap_pass},
+    pipeline::Pipeline,
+    render_context::RenderContext,
+    resources::{AccelerationStructure, Fence, PipelineLayout, Semaphore},
+    shader::Shader,
+};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;

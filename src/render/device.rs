@@ -1,29 +1,31 @@
-use crate::acceleration_structures::{
-    AccelerationStructureBuildSizesInfo, AccelerationStructureGeometryInfo,
-    AccelerationStructureInfo, AccelerationStructureLevel,
+use crate::render::{
+    acceleration_structures::{
+        AccelerationStructureBuildSizesInfo, AccelerationStructureGeometryInfo,
+        AccelerationStructureInfo, AccelerationStructureLevel,
+    },
+    buffer::{BufferInfo, BufferRegion, DeviceAddress},
+    descriptor::{
+        CopyDescriptorSet, DescriptorSetInfo, DescriptorSetLayoutInfo, DescriptorSizes,
+        Descriptors, WriteDescriptorSet,
+    },
+    framebuffer::FramebufferInfo,
+    image::{Image, ImageInfo, ImageView, ImageViewInfo},
+    physical_device::PhysicalDevice,
+    pipeline::{
+        GraphicsPipelineInfo, PipelineLayoutInfo, RayTracingPipelineInfo,
+        RayTracingShaderGroupInfo, ShaderBindingTable, ShaderBindingTableInfo,
+    },
+    render_pass::RenderPassInfo,
+    resources::{
+        AccelerationStructure, Buffer, DescriptorSet, DescriptorSetLayout, Fence, Framebuffer,
+        GraphicsPipeline, PipelineLayout, RayTracingPipeline, RenderPass, Sampler, Semaphore,
+        ShaderModule,
+    },
+    shader::ShaderModuleInfo,
+    surface::Surface,
+    swapchain::Swapchain,
+    util::{align_up, ToErupt},
 };
-use crate::buffer::{BufferInfo, BufferRegion, DeviceAddress};
-use crate::descriptor::{
-    CopyDescriptorSet, DescriptorSetInfo, DescriptorSetLayoutInfo, DescriptorSizes, Descriptors,
-    WriteDescriptorSet,
-};
-use crate::framebuffer::FramebufferInfo;
-use crate::image::{Image, ImageInfo, ImageView, ImageViewInfo};
-use crate::physical_device::PhysicalDevice;
-use crate::pipeline::{
-    GraphicsPipelineInfo, PipelineLayoutInfo, RayTracingPipelineInfo, RayTracingShaderGroupInfo,
-    ShaderBindingTable, ShaderBindingTableInfo,
-};
-use crate::render_pass::RenderPassInfo;
-use crate::resources::{
-    AccelerationStructure, Buffer, DescriptorSet, DescriptorSetLayout, Fence, Framebuffer,
-    GraphicsPipeline, PipelineLayout, RayTracingPipeline, RenderPass, Sampler, Semaphore,
-    ShaderModule,
-};
-use crate::shader::ShaderModuleInfo;
-use crate::surface::Surface;
-use crate::swapchain::Swapchain;
-use crate::util::{align_up, ToErupt};
 use crevice::internal::bytemuck;
 use crevice::internal::bytemuck::Pod;
 use erupt::{vk, DeviceLoader, ExtendableFromConst, InstanceLoader};
@@ -168,6 +170,8 @@ impl Device {
                 .lock()
                 .iter()
                 .for_each(|(_, &fence)| device.destroy_fence(Some(fence), None));
+
+            self.instance().destroy_instance(None);
 
             self.handle().destroy_device(None)
         }

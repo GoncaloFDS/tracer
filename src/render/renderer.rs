@@ -1,23 +1,23 @@
-pub use self::pass::*;
-
-use crate::acceleration_structures::{
-    AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
-    AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureLevel,
+use crate::render::{
+    acceleration_structures::{
+        AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
+        AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureLevel,
+    },
+    buffer::{BufferInfo, BufferRegion},
+    debug::DebugMessenger,
+    device::Device,
+    encoder::Encoder,
+    instance,
+    physical_device::PhysicalDevice,
+    pipeline::PathTracingPipeline,
+    pipeline::Pipeline,
+    render_context::RenderContext,
+    resources::{AccelerationStructure, Buffer},
+    surface::Surface,
+    swapchain::Swapchain,
 };
-use crate::buffer::{BufferInfo, BufferRegion};
-use crate::debug::DebugMessenger;
-use crate::device::Device;
-use crate::encoder::Encoder;
-use crate::instance;
-use crate::physical_device::PhysicalDevice;
-use crate::pipeline::{PathTracingPipeline, Pipeline};
-use crate::render_context::RenderContext;
-use crate::resources::{AccelerationStructure, Buffer};
-use crate::surface::Surface;
-use crate::swapchain::Swapchain;
 use bevy::prelude::*;
 use bumpalo::Bump;
-use crevice::internal::bytemuck;
 use crevice::std430::AsStd430;
 use erupt::{vk, EntryLoader, InstanceLoader};
 use glam::vec3;
@@ -27,15 +27,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use winit::window::Window;
 
-mod pass;
-
 pub struct Renderer {
     surface: Surface,
     swapchain: Swapchain,
     debug_messenger: DebugMessenger,
     physical_device: PhysicalDevice,
     render_context: RenderContext,
-    // raster_pipeline: RasterPipeline,
     path_tracing_pipeline: PathTracingPipeline,
     blases: HashMap<u8, AccelerationStructure>,
     vertex_buffer: Option<Buffer>,
@@ -67,12 +64,6 @@ impl Renderer {
         let mut swapchain = render_context.create_swapchain(&surface);
         swapchain.configure(&render_context.device, physical_device.info());
 
-        // let raster_pipeline = RasterPipeline::new(
-        //     &render_context,
-        //     physical_device.info().surface_format.format,
-        //     physical_device.info().surface_capabilities.current_extent,
-        // );
-
         let bump = Mutex::new(Bump::with_capacity(10000));
         let blases: HashMap<u8, AccelerationStructure> = Default::default();
 
@@ -88,7 +79,6 @@ impl Renderer {
             debug_messenger,
             physical_device,
             render_context,
-            // raster_pipeline,
             path_tracing_pipeline,
             blases,
             vertex_buffer: None,

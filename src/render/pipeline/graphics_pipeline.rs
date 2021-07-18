@@ -1,5 +1,5 @@
-use crate::resources::{PipelineLayout, RenderPass};
-use crate::shader::Shader;
+use crate::render::resources::{PipelineLayout, RenderPass};
+use crate::render::shader::Shader;
 use erupt::vk;
 
 #[derive(Clone)]

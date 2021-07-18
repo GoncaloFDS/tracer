@@ -1,7 +1,4 @@
-use crate::debug::VALIDATION_LAYER;
-use crate::device::Device;
-use crate::queue::Queue;
-use crate::surface::Surface;
+use crate::render::{debug::VALIDATION_LAYER, device::Device, queue::Queue, surface::Surface};
 use erupt::{vk, DeviceLoader, ExtendableFromConst, ExtendableFromMut, InstanceLoader};
 use std::ffi::CStr;
 use std::sync::Arc;

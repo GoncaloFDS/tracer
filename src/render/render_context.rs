@@ -1,5 +1,4 @@
-use crate::device::Device;
-use crate::queue::Queue;
+use crate::render::{device::Device, queue::Queue};
 use std::ops::Deref;
 
 pub struct RenderContext {

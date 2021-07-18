@@ -1,11 +1,8 @@
-extern crate bumpalo;
-
+use crate::render::renderer::Renderer;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::window::{WindowCreated, WindowResized};
 use bevy::winit::WinitWindows;
-
-use crate::renderer::Renderer;
 
 mod acceleration_structures;
 mod buffer;
@@ -17,12 +14,13 @@ mod encoder;
 mod framebuffer;
 mod image;
 mod instance;
+mod pass;
 mod physical_device;
 mod pipeline;
 mod queue;
 mod render_context;
 mod render_pass;
-mod renderer;
+pub mod renderer;
 mod resources;
 mod shader;
 mod surface;

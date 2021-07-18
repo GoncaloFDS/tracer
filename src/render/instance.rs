@@ -1,4 +1,4 @@
-use crate::debug::VALIDATION_LAYER;
+use crate::render::debug::VALIDATION_LAYER;
 use erupt::utils::surface;
 use erupt::{vk, EntryLoader, InstanceLoader};
 use std::ffi::CString;

@@ -1,8 +1,10 @@
-use crate::device::Device;
-use crate::image::{Image, ImageInfo};
-use crate::physical_device::PhysicalDeviceInfo;
-use crate::resources::Semaphore;
-use crate::surface::Surface;
+use crate::render::{
+    device::Device,
+    image::{Image, ImageInfo},
+    physical_device::PhysicalDeviceInfo,
+    resources::Semaphore,
+    surface::Surface,
+};
 use erupt::vk;
 
 pub struct SwapchainImage {

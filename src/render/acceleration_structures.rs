@@ -1,6 +1,8 @@
-use crate::buffer::{BufferRegion, DeviceAddress};
-use crate::resources::AccelerationStructure;
-use crate::util::ToErupt;
+use crate::render::{
+    buffer::{BufferRegion, DeviceAddress},
+    resources::AccelerationStructure,
+    util::ToErupt,
+};
 use erupt::vk;
 
 #[derive(Clone)]

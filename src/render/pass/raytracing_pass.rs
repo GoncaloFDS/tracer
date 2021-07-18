@@ -1,28 +1,29 @@
-use crate::acceleration_structures::{
-    AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
-    AccelerationStructureGeometryInfo, AccelerationStructureInfo, AccelerationStructureInstance,
-    AccelerationStructureLevel, TransformMatrix,
+use crate::render::pass::Pass;
+use crate::render::{
+    acceleration_structures::{
+        AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
+        AccelerationStructureGeometryInfo, AccelerationStructureInfo,
+        AccelerationStructureInstance, AccelerationStructureLevel, TransformMatrix,
+    },
+    buffer::{BufferInfo, BufferRegion},
+    descriptor::{
+        DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
+        Descriptors, WriteDescriptorSet,
+    },
+    image::{Image, ImageInfo, ImageMemoryBarrier, ImageViewInfo},
+    pipeline::{
+        PipelineLayoutInfo, RayTracingPipelineInfo, RayTracingShaderGroupInfo, ShaderBindingTable,
+        ShaderBindingTableInfo,
+    },
+    render_context::RenderContext,
+    resources::{
+        AccelerationStructure, Buffer, DescriptorSet, Fence, PipelineLayout, RayTracingPipeline,
+        Semaphore,
+    },
+    shader::{Shader, ShaderModuleInfo},
 };
-use crate::buffer::{BufferInfo, BufferRegion};
-use crate::descriptor::{
-    DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
-    Descriptors, WriteDescriptorSet,
-};
-use crate::image::{Image, ImageInfo, ImageMemoryBarrier, ImageViewInfo};
-use crate::pipeline::{
-    PipelineLayoutInfo, RayTracingPipelineInfo, RayTracingShaderGroupInfo, ShaderBindingTable,
-    ShaderBindingTableInfo,
-};
-use crate::render_context::RenderContext;
-use crate::renderer::Pass;
-use crate::resources::{
-    AccelerationStructure, Buffer, DescriptorSet, Fence, PipelineLayout, RayTracingPipeline,
-    Semaphore,
-};
-use crate::shader::{Shader, ShaderModuleInfo};
 use bevy::prelude::GlobalTransform;
-use bumpalo::collections::Vec as BVec;
-use bumpalo::Bump;
+use bumpalo::{collections::Vec as BVec, Bump};
 use crevice::std430::{AsStd430, Std430};
 use erupt::vk;
 use glam::{vec3, vec4, Mat4, Vec3};

@@ -1,4 +1,4 @@
-use crate::resources::ShaderModule;
+use crate::render::resources::ShaderModule;
 use erupt::vk;
 use std::env;
 use std::fs::File;

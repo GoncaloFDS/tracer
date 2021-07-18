@@ -2,12 +2,13 @@ pub mod raster_pass;
 pub mod raytracing_pass;
 pub mod tonemap_pass;
 
-use crate::render_context::RenderContext;
-use crate::resources::{Fence, Semaphore};
-use erupt::vk;
-
+use crate::render::{
+    render_context::RenderContext,
+    resources::{Fence, Semaphore},
+};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
+use erupt::vk;
 pub use raster_pass::*;
 
 pub trait Pass<'a> {

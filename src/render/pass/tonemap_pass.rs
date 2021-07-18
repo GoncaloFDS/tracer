@@ -1,18 +1,20 @@
-use crate::descriptor::{
-    DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
-    Descriptors, WriteDescriptorSet,
+use crate::render::pass::Pass;
+use crate::render::{
+    descriptor::{
+        DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
+        Descriptors, WriteDescriptorSet,
+    },
+    framebuffer::FramebufferInfo,
+    image::{Image, ImageView, ImageViewInfo},
+    pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer},
+    render_context::RenderContext,
+    render_pass::{AttachmentInfo, ClearValue, RenderPassInfo, Subpass},
+    resources::{
+        DescriptorSet, Fence, Framebuffer, GraphicsPipeline, PipelineLayout, RenderPass, Sampler,
+        Semaphore,
+    },
+    shader::{Shader, ShaderModuleInfo},
 };
-use crate::framebuffer::FramebufferInfo;
-use crate::image::{Image, ImageView, ImageViewInfo};
-use crate::pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer};
-use crate::render_context::RenderContext;
-use crate::render_pass::{AttachmentInfo, ClearValue, RenderPassInfo, Subpass};
-use crate::renderer::Pass;
-use crate::resources::{
-    DescriptorSet, Fence, Framebuffer, GraphicsPipeline, PipelineLayout, RenderPass, Sampler,
-    Semaphore,
-};
-use crate::shader::{Shader, ShaderModuleInfo};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;

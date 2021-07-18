@@ -1,5 +1,7 @@
-use crate::resources::Buffer;
-use crate::util::{align_up, ToErupt};
+use crate::render::{
+    resources::Buffer,
+    util::{align_up, ToErupt},
+};
 use erupt::vk;
 use gpu_alloc::UsageFlags;
 use std::num::NonZeroU64;
@@ -9,18 +11,6 @@ pub struct BufferInfo {
     pub size: u64,
     pub usage_flags: vk::BufferUsageFlags,
     pub allocation_flags: UsageFlags,
-}
-
-impl BufferInfo {
-    #[inline(always)]
-    pub fn is_valid(&self) -> bool {
-        let is_mask = self
-            .align
-            .checked_add(1)
-            .map_or(false, u64::is_power_of_two);
-
-        is_mask && (align_up(self.align, self.size).is_some())
-    }
 }
 
 #[derive(Clone)]

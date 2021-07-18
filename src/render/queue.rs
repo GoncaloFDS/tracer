@@ -1,8 +1,10 @@
-use crate::command_buffer::CommandBuffer;
-use crate::device::Device;
-use crate::encoder::Encoder;
-use crate::resources::{Fence, Semaphore};
-use crate::swapchain::SwapchainImage;
+use crate::render::{
+    command_buffer::CommandBuffer,
+    device::Device,
+    encoder::Encoder,
+    resources::{Fence, Semaphore},
+    swapchain::SwapchainImage,
+};
 use erupt::vk;
 use erupt::vk::{PipelineStageFlags, PresentInfoKHRBuilder};
 use smallvec::SmallVec;
@@ -52,7 +54,7 @@ impl Queue {
                 .remove(0)
         };
 
-        let command_buffer = CommandBuffer::new(command_buffer, self.family_index);
+        let command_buffer = CommandBuffer::new(command_buffer);
 
         Encoder::new(command_buffer)
     }

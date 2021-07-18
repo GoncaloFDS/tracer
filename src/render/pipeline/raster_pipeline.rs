@@ -1,8 +1,11 @@
-use crate::image::Image;
-use crate::pipeline::Pipeline;
-use crate::render_context::RenderContext;
-use crate::renderer::{raster_pass, Pass, RasterPass};
-use crate::resources::{AccelerationStructure, Fence, Semaphore};
+use crate::render::{
+    image::Image,
+    pass::Pass,
+    pass::{raster_pass, RasterPass},
+    pipeline::Pipeline,
+    render_context::RenderContext,
+    resources::{AccelerationStructure, Fence, Semaphore},
+};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;

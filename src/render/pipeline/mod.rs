@@ -2,9 +2,11 @@ pub use self::graphics_pipeline::*;
 pub use self::raster_pipeline::*;
 pub use self::ray_tracing_pipeline::*;
 
-use crate::image::Image;
-use crate::render_context::RenderContext;
-use crate::resources::{AccelerationStructure, DescriptorSetLayout, Semaphore};
+use crate::render::{
+    image::Image,
+    render_context::RenderContext,
+    resources::{AccelerationStructure, DescriptorSetLayout, Semaphore},
+};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;

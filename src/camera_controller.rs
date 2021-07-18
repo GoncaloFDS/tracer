@@ -1,4 +1,3 @@
-use bevy::input::mouse::MouseButtonInput;
 use bevy::{input::mouse::MouseMotion, prelude::*};
 
 #[derive(Debug)]
@@ -157,6 +156,7 @@ pub fn movement_axis(input: &Res<Input<KeyCode>>, plus: KeyCode, minus: KeyCode)
     axis
 }
 
+#[derive(Default)]
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {

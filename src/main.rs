@@ -1,6 +1,8 @@
 mod camera_controller;
+mod render;
 
 use crate::camera_controller::{CameraController, CameraPlugin};
+use crate::render::RenderPlugin;
 use bevy::math::vec3;
 use bevy::prelude::*;
 
@@ -26,8 +28,8 @@ fn main() {
         .add_plugin(bevy::winit::WinitPlugin::default())
         .add_plugin(bevy::asset::AssetPlugin::default())
         .add_plugin(bevy::scene::ScenePlugin::default())
-        .add_plugin(CameraPlugin)
-        .add_plugin(rdx_renderer::RenderPlugin::default())
+        .add_plugin(CameraPlugin::default())
+        .add_plugin(RenderPlugin::default())
         .add_startup_system(setup.system())
         .run()
 }

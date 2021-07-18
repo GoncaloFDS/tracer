@@ -1,13 +1,13 @@
-use crate::framebuffer::FramebufferInfo;
-use crate::image::{Image, ImageInfo, ImageViewInfo};
-use crate::pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer};
-use crate::render_context::RenderContext;
-use crate::render_pass::{AttachmentInfo, ClearValue, RenderPassInfo, Subpass};
-use crate::renderer::Pass;
-use crate::resources::{
-    Fence, Framebuffer, GraphicsPipeline, PipelineLayout, RenderPass, Semaphore,
+use crate::render::{
+    framebuffer::FramebufferInfo,
+    image::{Image, ImageInfo, ImageViewInfo},
+    pass::Pass,
+    pipeline::{GraphicsPipelineInfo, PipelineLayoutInfo, Rasterizer},
+    render_context::RenderContext,
+    render_pass::{AttachmentInfo, ClearValue, RenderPassInfo, Subpass},
+    resources::{Fence, Framebuffer, GraphicsPipeline, PipelineLayout, RenderPass, Semaphore},
+    shader::{Shader, ShaderModuleInfo},
 };
-use crate::shader::{Shader, ShaderModuleInfo};
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
@@ -40,13 +40,13 @@ impl Pass<'_> for RasterPass {
     fn draw(
         &mut self,
         input: Input,
-        frame: u64,
+        _frame: u64,
         wait: &[(vk::PipelineStageFlags, Semaphore)],
         signal: &[Semaphore],
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
-        bump: &Bump,
-        camera: &GlobalTransform,
+        _bump: &Bump,
+        _camera: &GlobalTransform,
     ) -> Self::Output {
         let fb;
         let framebuffer = match self.framebuffers.get(&input.target) {

@@ -1,32 +1,32 @@
-use crate::acceleration_structures::{
-    AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
+use crate::render::{
+    acceleration_structures::{
+        AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
+    },
+    buffer::BufferRegion,
+    device::Device,
+    encoder::Command,
+    image::ImageMemoryBarrier,
+    pipeline::ShaderBindingTable,
+    render_pass::{ClearValue, DEFAULT_ATTACHMENT_COUNT},
+    resources::{
+        Buffer, DescriptorSet, Framebuffer, GraphicsPipeline, PipelineLayout, RayTracingPipeline,
+        RenderPass,
+    },
+    util::ToErupt,
 };
-use crate::buffer::BufferRegion;
-use crate::device::Device;
-use crate::encoder::Command;
-use crate::image::ImageMemoryBarrier;
-use crate::pipeline::ShaderBindingTable;
-use crate::render_pass::{ClearValue, DEFAULT_ATTACHMENT_COUNT};
-use crate::resources::{
-    Buffer, DescriptorSet, Framebuffer, GraphicsPipeline, PipelineLayout, RayTracingPipeline,
-    RenderPass,
-};
-use crate::util::ToErupt;
 use erupt::{vk, DeviceLoader};
 use smallvec::SmallVec;
 use std::ops::Range;
 
 pub struct CommandBuffer {
     handle: vk::CommandBuffer,
-    queue_family_index: u32,
     recording: bool,
 }
 
 impl CommandBuffer {
-    pub fn new(handle: vk::CommandBuffer, queue_family_index: u32) -> Self {
+    pub fn new(handle: vk::CommandBuffer) -> Self {
         CommandBuffer {
             handle,
-            queue_family_index,
             recording: false,
         }
     }
