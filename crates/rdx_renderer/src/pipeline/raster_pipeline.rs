@@ -3,6 +3,7 @@ use crate::pipeline::Pipeline;
 use crate::render_context::RenderContext;
 use crate::renderer::{raster_pass, Pass, RasterPass};
 use crate::resources::{AccelerationStructure, Fence, Semaphore};
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use std::collections::HashMap;
@@ -36,6 +37,7 @@ impl Pipeline for RasterPipeline {
         target_signal: &Semaphore,
         _blases: &HashMap<u8, AccelerationStructure>,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) {
         let fence = &self.fences[(self.frame % 2) as usize];
         if self.frame > 1 {
@@ -55,6 +57,7 @@ impl Pipeline for RasterPipeline {
             Some(fence),
             render_context,
             bump,
+            camera,
         );
 
         self.frame += 1;

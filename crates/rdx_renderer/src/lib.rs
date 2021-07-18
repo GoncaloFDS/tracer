@@ -58,8 +58,9 @@ fn setup(
     commands.insert_resource(renderer);
 }
 
-fn draw(mut renderer: ResMut<Renderer>) {
-    renderer.draw()
+fn draw(mut renderer: ResMut<Renderer>, mut query: Query<&GlobalTransform>) {
+    let camera_transform = query.single_mut().unwrap();
+    renderer.draw(camera_transform);
 }
 
 fn window_resize(mut window_resized_event: EventReader<WindowResized>) {

@@ -20,6 +20,7 @@ use crate::resources::{
     Semaphore,
 };
 use crate::shader::{Shader, ShaderModuleInfo};
+use bevy::prelude::GlobalTransform;
 use bumpalo::collections::Vec as BVec;
 use bumpalo::Bump;
 use crevice::std430::{AsStd430, Std430};
@@ -78,6 +79,7 @@ impl<'a> Pass<'a> for RayTracingPass {
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) -> Self::Output {
         let mut encoder = render_context.queue.create_enconder();
 
@@ -96,6 +98,25 @@ impl<'a> Pass<'a> for RayTracingPass {
             vk::AccessFlags::ACCELERATION_STRUCTURE_WRITE_KHR,
             vk::AccessFlags::ACCELERATION_STRUCTURE_READ_KHR,
             &[],
+        );
+
+        let view = Mat4::from_scale_rotation_translation(
+            camera.scale,
+            camera.rotation.inverse(),
+            -camera.translation,
+        );
+        let proj = Mat4::perspective_rh(90.0f32.to_radians(), 800.0 / 600.0, 0.001, 10000.0);
+
+        self.globals.camera = CameraUniform {
+            view: view.into(),
+            proj: proj.into(),
+            view_inverse: view.inverse().into(),
+            proj_inverse: proj.inverse().into(),
+        };
+        render_context.write_buffer(
+            &mut self.globals_buffer,
+            0,
+            self.globals.as_std430().as_bytes(),
         );
 
         let build_info = bump.alloc([AccelerationStructureBuildGeometryInfo {

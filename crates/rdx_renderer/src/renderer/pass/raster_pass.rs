@@ -8,6 +8,7 @@ use crate::resources::{
     Fence, Framebuffer, GraphicsPipeline, PipelineLayout, RenderPass, Semaphore,
 };
 use crate::shader::{Shader, ShaderModuleInfo};
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use lru::LruCache;
@@ -45,6 +46,7 @@ impl Pass<'_> for RasterPass {
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) -> Self::Output {
         let fb;
         let framebuffer = match self.framebuffers.get(&input.target) {

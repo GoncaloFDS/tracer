@@ -8,8 +8,8 @@ edition = "2018"
 bevy = { version = "0.5", default-features = false, features = ["bevy_winit"] }
 serde = { version = "1.0", features = ["derive"] }
 
-# Math
-glam = { version = "0.17", features = ["transform-types", "mint"] }
+# Math (needs to be the same version that bevy uses)
+glam = { version = "0.13", features = ["transform-types", "mint"] }
 
 mint = "0.5"
 crevice = "0.6"

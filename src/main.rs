@@ -1,3 +1,7 @@
+mod camera_controller;
+
+use crate::camera_controller::{CameraController, CameraPlugin};
+use bevy::math::vec3;
 use bevy::prelude::*;
 
 fn main() {
@@ -22,6 +26,24 @@ fn main() {
         .add_plugin(bevy::winit::WinitPlugin::default())
         .add_plugin(bevy::asset::AssetPlugin::default())
         .add_plugin(bevy::scene::ScenePlugin::default())
+        .add_plugin(CameraPlugin)
         .add_plugin(rdx_renderer::RenderPlugin::default())
+        .add_startup_system(setup.system())
         .run()
+}
+
+#[derive(Bundle, Default)]
+pub struct CameraBundle {
+    pub global_transform: GlobalTransform,
+    pub transform: Transform,
+}
+
+fn setup(mut commands: Commands) {
+    let mut camera = CameraBundle::default();
+    camera.transform.translation = vec3(0.0, 0.0, 1.0);
+    camera.transform.looking_at(Vec3::ZERO, Vec3::Y);
+    commands
+        .spawn()
+        .insert_bundle(camera)
+        .insert(CameraController::default());
 }

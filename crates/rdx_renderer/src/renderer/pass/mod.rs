@@ -6,6 +6,7 @@ use crate::render_context::RenderContext;
 use crate::resources::{Fence, Semaphore};
 use erupt::vk;
 
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 pub use raster_pass::*;
 
@@ -22,5 +23,6 @@ pub trait Pass<'a> {
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) -> Self::Output;
 }

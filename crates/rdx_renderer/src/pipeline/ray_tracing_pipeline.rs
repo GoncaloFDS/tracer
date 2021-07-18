@@ -7,6 +7,7 @@ use crate::renderer::tonemap_pass::TonemapPass;
 use crate::renderer::{raytracing_pass, tonemap_pass, Pass};
 use crate::resources::{AccelerationStructure, Fence, PipelineLayout, Semaphore};
 use crate::shader::Shader;
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use std::collections::HashMap;
@@ -79,6 +80,7 @@ impl Pipeline for PathTracingPipeline {
         target_signal: &Semaphore,
         blases: &HashMap<u8, AccelerationStructure>,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) {
         let fence = &self.fences[(self.frame % 2) as usize];
         if self.frame > 1 {
@@ -94,6 +96,7 @@ impl Pipeline for PathTracingPipeline {
             None,
             render_context,
             bump,
+            camera,
         );
 
         self.tonemap_pass.draw(
@@ -110,6 +113,7 @@ impl Pipeline for PathTracingPipeline {
             Some(fence),
             render_context,
             bump,
+            camera,
         );
 
         self.frame += 1;

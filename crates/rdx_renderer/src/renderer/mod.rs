@@ -15,6 +15,7 @@ use crate::render_context::RenderContext;
 use crate::resources::{AccelerationStructure, Buffer};
 use crate::surface::Surface;
 use crate::swapchain::Swapchain;
+use bevy::prelude::*;
 use bumpalo::Bump;
 use crevice::internal::bytemuck;
 use crevice::std430::AsStd430;
@@ -99,7 +100,7 @@ impl Renderer {
         }
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, camera: &GlobalTransform) {
         let mut encoder = self.render_context.queue.create_enconder();
 
         if let Entry::Vacant(entry) = self.blases.entry(0) {
@@ -150,6 +151,7 @@ impl Renderer {
             &swapchain_image.info().signal,
             &self.blases,
             &self.bump.lock(),
+            camera,
         );
 
         self.render_context.queue.present(swapchain_image);

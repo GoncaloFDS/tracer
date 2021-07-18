@@ -13,6 +13,7 @@ use crate::resources::{
     Semaphore,
 };
 use crate::shader::{Shader, ShaderModuleInfo};
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use erupt::vk::{PipelineStageFlags, ShaderStageFlags};
@@ -53,6 +54,7 @@ impl Pass<'_> for TonemapPass {
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
         bump: &Bump,
+        camera: &GlobalTransform,
     ) -> Output {
         let framebuffer = match self.framebuffers.get(&input.final_image) {
             None => {

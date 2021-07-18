@@ -5,6 +5,7 @@ pub use self::ray_tracing_pipeline::*;
 use crate::image::Image;
 use crate::render_context::RenderContext;
 use crate::resources::{AccelerationStructure, DescriptorSetLayout, Semaphore};
+use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use std::collections::HashMap;
@@ -22,6 +23,7 @@ pub trait Pipeline {
         target_signal: &Semaphore,
         blases: &HashMap<u8, AccelerationStructure>,
         bump: &Bump,
+        camera: &GlobalTransform,
     );
 }
 
