@@ -108,10 +108,66 @@ impl Device {
 
         unsafe {
             self.inner
+                .buffers
+                .lock()
+                .iter()
+                .for_each(|(_, &buffer)| device.destroy_buffer(Some(buffer), None));
+
+            self.inner
+                .swapchains
+                .lock()
+                .iter()
+                .for_each(|(_, &swapchain)| device.destroy_swapchain_khr(Some(swapchain), None));
+
+            self.inner
+                .semaphores
+                .lock()
+                .iter()
+                .for_each(|(_, &semaphore)| device.destroy_semaphore(Some(semaphore), None));
+
+            self.inner
+                .fences
+                .lock()
+                .iter()
+                .for_each(|(_, &fence)| device.destroy_fence(Some(fence), None));
+
+            self.inner
                 .framebuffers
                 .lock()
                 .iter()
                 .for_each(|(_, &framebuffer)| device.destroy_framebuffer(Some(framebuffer), None));
+
+            self.inner
+                .image_views
+                .lock()
+                .iter()
+                .for_each(|(_, &view)| device.destroy_image_view(Some(view), None));
+
+            self.inner
+                .images
+                .lock()
+                .iter()
+                .for_each(|(_, &image)| device.destroy_image(Some(image), None));
+
+            self.inner
+                .samplers
+                .lock()
+                .iter()
+                .for_each(|(_, &sampler)| device.destroy_sampler(Some(sampler), None));
+
+            self.inner
+                .descriptor_pools
+                .lock()
+                .iter()
+                .for_each(|(_, &descriptor_pool)| {
+                    device.destroy_descriptor_pool(Some(descriptor_pool), None)
+                });
+
+            self.inner.descriptor_set_layouts.lock().iter().for_each(
+                |(_, &descriptor_set_layout)| {
+                    device.destroy_descriptor_set_layout(Some(descriptor_set_layout), None)
+                },
+            );
 
             self.inner
                 .pipeline_layouts
@@ -141,35 +197,11 @@ impl Device {
                     device.destroy_shader_module(Some(shader_module), None)
                 });
 
-            self.inner
-                .image_views
-                .lock()
-                .iter()
-                .for_each(|(_, &view)| device.destroy_image_view(Some(view), None));
-
-            self.inner
-                .images
-                .lock()
-                .iter()
-                .for_each(|(_, &image)| device.destroy_image(Some(image), None));
-
-            self.inner
-                .swapchains
-                .lock()
-                .iter()
-                .for_each(|(_, &swapchain)| device.destroy_swapchain_khr(Some(swapchain), None));
-
-            self.inner
-                .semaphores
-                .lock()
-                .iter()
-                .for_each(|(_, &semaphore)| device.destroy_semaphore(Some(semaphore), None));
-
-            self.inner
-                .fences
-                .lock()
-                .iter()
-                .for_each(|(_, &fence)| device.destroy_fence(Some(fence), None));
+            self.inner.acceleration_structures.lock().iter().for_each(
+                |(_, &acceleration_structure)| {
+                    device.destroy_acceleration_structure_khr(Some(acceleration_structure), None)
+                },
+            );
 
             self.instance().destroy_instance(None);
 
@@ -195,8 +227,7 @@ impl Device {
 
     pub fn create_buffer(&self, info: BufferInfo) -> Buffer {
         let buffer = unsafe {
-            self.inner
-                .handle
+            self.handle()
                 .create_buffer(
                     &vk::BufferCreateInfoBuilder::new()
                         .size(info.size)
@@ -210,8 +241,7 @@ impl Device {
         let mem_requirements = unsafe { self.inner.handle.get_buffer_memory_requirements(buffer) };
 
         let mem_block = unsafe {
-            self.inner
-                .allocator
+            self.allocator()
                 .lock()
                 .alloc(
                     EruptMemoryDevice::wrap(self.handle()),
@@ -226,15 +256,14 @@ impl Device {
         };
 
         unsafe {
-            self.inner
-                .handle
+            self.handle()
                 .bind_buffer_memory(buffer, *mem_block.memory(), mem_block.offset())
                 .unwrap()
         }
 
         let device_address = if info.allocation_flags.contains(UsageFlags::DEVICE_ADDRESS) {
             let device_address = unsafe {
-                self.inner.handle.get_buffer_device_address(
+                self.handle().get_buffer_device_address(
                     &vk::BufferDeviceAddressInfoBuilder::new().buffer(buffer),
                 )
             };
@@ -246,7 +275,6 @@ impl Device {
         let buffer_index = self.inner.buffers.lock().insert(buffer);
         let allocation_flags = info.allocation_flags;
 
-        tracing::debug!("Created Buffer {:p}", buffer);
         Buffer::new(
             info,
             buffer,

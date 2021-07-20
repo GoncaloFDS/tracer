@@ -48,6 +48,12 @@ pub enum AccelerationStructureGeometryInfo {
     },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum IndexData {
+    U16(DeviceAddress),
+    U32(DeviceAddress),
+}
+
 #[derive(Clone)]
 pub struct AccelerationStructureBuildGeometryInfo<'a> {
     pub src: Option<AccelerationStructure>,
@@ -66,7 +72,7 @@ pub enum AccelerationStructureGeometry {
         vertex_count: u32,
         first_vertex: u32,
         primitive_count: u32,
-        index_data: Option<DeviceAddress>,
+        index_data: Option<IndexData>,
         transform_data: Option<DeviceAddress>,
     },
     Instances {

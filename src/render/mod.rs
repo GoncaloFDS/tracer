@@ -1,6 +1,10 @@
+use crate::material::Material;
+use crate::render::mesh::Mesh;
 use crate::render::renderer::Renderer;
+use crate::Camera;
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use bevy::utils::HashSet;
 use bevy::window::{WindowCreated, WindowResized};
 use bevy::winit::WinitWindows;
 
@@ -14,6 +18,7 @@ mod encoder;
 mod framebuffer;
 mod image;
 mod instance;
+pub mod mesh;
 mod pass;
 mod physical_device;
 mod pipeline;
@@ -26,13 +31,17 @@ mod shader;
 mod surface;
 mod swapchain;
 mod util;
+pub mod vertex;
 
 #[derive(Default)]
 pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, setup.system())
+        app.add_asset::<Mesh>()
+            .add_asset::<Material>()
+            .add_startup_system_to_stage(StartupStage::PreStartup, setup.system())
+            .add_system(load_gltf_models.system())
             .add_system_to_stage(CoreStage::PreUpdate, window_resize.system())
             .add_system_to_stage(CoreStage::Update, draw.system())
             .add_system_to_stage(CoreStage::Last, world_cleanup.system());
@@ -56,9 +65,39 @@ fn setup(
     commands.insert_resource(renderer);
 }
 
-fn draw(mut renderer: ResMut<Renderer>, mut query: Query<&GlobalTransform>) {
-    let camera_transform = query.single_mut().unwrap();
-    renderer.draw(camera_transform);
+fn load_gltf_models(
+    mut renderer: ResMut<Renderer>,
+    meshes: Res<Assets<Mesh>>,
+    mut mesh_events: EventReader<AssetEvent<Mesh>>,
+) {
+    let mut changed_meshes = HashSet::default();
+    for event in mesh_events.iter() {
+        match event {
+            AssetEvent::Created { ref handle } => {
+                tracing::info!("created mesh");
+                changed_meshes.insert(handle.clone_weak());
+            }
+            AssetEvent::Modified { ref handle } => {
+                tracing::info!("modified mesh");
+                changed_meshes.insert(handle.clone_weak());
+            }
+            AssetEvent::Removed { ref handle } => {
+                tracing::info!("removed mesh");
+                changed_meshes.remove(handle);
+            }
+        }
+    }
+
+    for changed_mesh_handle in changed_meshes.iter() {
+        if let Some(mesh) = meshes.get(changed_mesh_handle) {
+            renderer.load_models(changed_mesh_handle, mesh);
+        }
+    }
+}
+
+fn draw(mut renderer: ResMut<Renderer>, mut query: Query<(&Camera, &GlobalTransform)>) {
+    let (_camera, transform) = query.single_mut().unwrap();
+    renderer.draw(transform);
 }
 
 fn window_resize(mut window_resized_event: EventReader<WindowResized>) {

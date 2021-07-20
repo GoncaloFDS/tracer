@@ -34,3 +34,10 @@ lru = "0.6"
 bumpalo = { version = "3.7" , features = ["collections"]}
 
 egui = "0.13"
+
+# bevy gltf adaptation
+gltf = "0.16"
+thiserror = "1.0"
+anyhow = "1.0"
+base64 = "0.13"
+percent-encoding = "2.1"

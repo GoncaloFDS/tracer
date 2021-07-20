@@ -1,3 +1,4 @@
+use crate::render::acceleration_structures::IndexData;
 use crate::render::{
     acceleration_structures::{
         AccelerationStructureBuildGeometryInfo, AccelerationStructureGeometry,
@@ -380,16 +381,24 @@ impl CommandBuffer {
                         transform_data,
                     } => {
                         geometries.push(vk::AccelerationStructureGeometryKHRBuilder::new()
-                            .flags(flags.clone())
+                            .flags(*flags)
                             .geometry_type(vk::GeometryTypeKHR::TRIANGLES_KHR)
                             .geometry(vk::AccelerationStructureGeometryDataKHR {
                                 triangles: vk::AccelerationStructureGeometryTrianglesDataKHRBuilder::new()
-                                    .vertex_format(vertex_format.clone())
+                                    .vertex_format(*vertex_format)
                                     .vertex_data(vertex_data.to_erupt())
                                     .vertex_stride(*vertex_stride)
                                     .max_vertex(*vertex_count)
-                                    .index_type(vk::IndexType::UINT16)
-                                    .index_data(index_data.unwrap().to_erupt())
+                                    .index_type(match index_data {
+                                        None => vk::IndexType::NONE_KHR,
+                                        Some(IndexData::U16(_)) => vk::IndexType::UINT16    ,
+                                        Some(IndexData::U32(_)) => vk::IndexType::UINT32,
+                                    })
+                                    .index_data(match index_data {
+                                        None => Default::default(),
+                                        Some(IndexData::U16(device_address)) => device_address.to_erupt(),
+                                        Some(IndexData::U32(device_address)) => device_address.to_erupt(),
+                                    })
                                     .transform_data(transform_data.as_ref().map(|device_address| device_address.to_erupt()).unwrap_or_default())
                                     .build()
                             }));

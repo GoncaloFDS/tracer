@@ -25,7 +25,7 @@ impl Default for CameraController {
         Self {
             accel: 1.5,
             max_speed: 0.5,
-            sensitivity: 3.0,
+            sensitivity: 6.0,
             velocity: Vec3::ZERO,
             friction: 1.0,
             pitch: 0.0,

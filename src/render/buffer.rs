@@ -1,7 +1,4 @@
-use crate::render::{
-    resources::Buffer,
-    util::{align_up, ToErupt},
-};
+use crate::render::{resources::Buffer, util::ToErupt};
 use erupt::vk;
 use gpu_alloc::UsageFlags;
 use std::num::NonZeroU64;

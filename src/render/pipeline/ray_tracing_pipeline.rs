@@ -1,3 +1,4 @@
+use crate::render::mesh::Mesh;
 use crate::render::pass::Pass;
 use crate::render::{
     buffer::BufferRegion,
@@ -10,6 +11,7 @@ use crate::render::{
     resources::{AccelerationStructure, Fence, PipelineLayout, Semaphore},
     shader::Shader,
 };
+use bevy::asset::Handle;
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
@@ -81,7 +83,7 @@ impl Pipeline for PathTracingPipeline {
         target: Image,
         target_wait: &Semaphore,
         target_signal: &Semaphore,
-        blases: &HashMap<u8, AccelerationStructure>,
+        blases: &HashMap<Handle<Mesh>, AccelerationStructure>,
         bump: &Bump,
         camera: &GlobalTransform,
     ) {

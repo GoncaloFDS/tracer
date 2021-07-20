@@ -56,7 +56,7 @@ impl Pass<'_> for TonemapPass {
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
         bump: &Bump,
-        camera: &GlobalTransform,
+        _camera: &GlobalTransform,
     ) -> Output {
         let framebuffer = match self.framebuffers.get(&input.final_image) {
             None => {

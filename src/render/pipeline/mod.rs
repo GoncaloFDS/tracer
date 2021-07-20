@@ -1,20 +1,21 @@
 pub use self::graphics_pipeline::*;
-pub use self::raster_pipeline::*;
 pub use self::ray_tracing_pipeline::*;
 
+use crate::render::mesh::Mesh;
 use crate::render::{
     image::Image,
     render_context::RenderContext,
     resources::{AccelerationStructure, DescriptorSetLayout, Semaphore},
 };
+use bevy::asset::Handle;
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
 use std::collections::HashMap;
 
 mod graphics_pipeline;
-mod raster_pipeline;
 mod ray_tracing_pipeline;
+pub mod vertex_format;
 
 pub trait Pipeline {
     fn draw(
@@ -23,7 +24,7 @@ pub trait Pipeline {
         target: Image,
         target_wait: &Semaphore,
         target_signal: &Semaphore,
-        blases: &HashMap<u8, AccelerationStructure>,
+        blases: &HashMap<Handle<Mesh>, AccelerationStructure>,
         bump: &Bump,
         camera: &GlobalTransform,
     );

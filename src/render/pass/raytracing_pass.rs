@@ -1,3 +1,4 @@
+use crate::render::mesh::Mesh;
 use crate::render::pass::Pass;
 use crate::render::{
     acceleration_structures::{
@@ -22,6 +23,7 @@ use crate::render::{
     },
     shader::{Shader, ShaderModuleInfo},
 };
+use bevy::asset::Handle;
 use bevy::prelude::GlobalTransform;
 use bumpalo::{collections::Vec as BVec, Bump};
 use crevice::std430::{AsStd430, Std430};
@@ -59,7 +61,7 @@ pub struct RayTracingPass {
 }
 
 pub struct Input<'a> {
-    pub blases: &'a HashMap<u8, AccelerationStructure>,
+    pub blases: &'a HashMap<Handle<Mesh>, AccelerationStructure>,
 }
 
 pub struct Output {
@@ -74,7 +76,7 @@ impl<'a> Pass<'a> for RayTracingPass {
     fn draw(
         &mut self,
         input: Self::Input,
-        frame: u64,
+        _frame: u64,
         wait: &[(vk::PipelineStageFlags, Semaphore)],
         signal: &[Semaphore],
         fence: Option<&Fence>,
@@ -86,12 +88,12 @@ impl<'a> Pass<'a> for RayTracingPass {
 
         let mut as_instances = BVec::new_in(bump);
 
-        let blas = input.blases.get(&0u8).unwrap();
-
-        as_instances.push(
-            AccelerationStructureInstance::new(blas.device_address())
-                .with_transform(TransformMatrix::identity()),
-        );
+        for blas in input.blases.values() {
+            as_instances.push(
+                AccelerationStructureInstance::new(blas.device_address())
+                    .with_transform(TransformMatrix::identity()),
+            );
+        }
 
         encoder.pipeline_barrier(
             vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
