@@ -1,6 +1,7 @@
 pub mod raster_pass;
 pub mod raytracing_pass;
 pub mod tonemap_pass;
+pub mod ui_pass;
 
 use crate::render::{
     render_context::RenderContext,

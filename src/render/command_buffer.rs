@@ -124,6 +124,12 @@ impl CommandBuffer {
                     dst_access_mask,
                     image_barriers,
                 ),
+                Command::PushConstants {
+                    layout,
+                    stages,
+                    offset,
+                    data,
+                } => self.push_constants(device, layout, stages, offset, data),
             }
         }
 
@@ -139,7 +145,7 @@ impl CommandBuffer {
         framebuffer: &Framebuffer,
         clears: &[ClearValue],
     ) {
-        let mut clears = clears.into_iter();
+        let mut clears = clears.iter();
         let clear_values = render_pass
             .info()
             .attachments
@@ -494,6 +500,26 @@ impl CommandBuffer {
                 offset,
                 data.len() as _,
                 data.as_ptr() as _,
+            )
+        }
+    }
+
+    fn push_constants(
+        &mut self,
+        device: &DeviceLoader,
+        layout: &PipelineLayout,
+        stages: vk::ShaderStageFlags,
+        offset: u32,
+        data: &[u8],
+    ) {
+        unsafe {
+            device.cmd_push_constants(
+                self.handle,
+                layout.handle(),
+                stages,
+                offset,
+                data.len() as u32,
+                data.as_ptr() as *const _,
             )
         }
     }

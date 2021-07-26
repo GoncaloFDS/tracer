@@ -1,5 +1,6 @@
 use crate::render::mesh::Mesh;
-use crate::render::pass::Pass;
+use crate::render::pass::ui_pass::UIPass;
+use crate::render::pass::{ui_pass, Pass};
 use crate::render::{
     buffer::BufferRegion,
     image::Image,
@@ -57,6 +58,7 @@ pub struct ShaderBindingTable {
 pub struct PathTracingPipeline {
     raytracing_pass: RayTracingPass,
     tonemap_pass: TonemapPass,
+    ui_pass: UIPass,
     frame: u64,
     fences: [Fence; 2],
 }
@@ -70,6 +72,7 @@ impl PathTracingPipeline {
         PathTracingPipeline {
             raytracing_pass: RayTracingPass::new(render_context, extent),
             tonemap_pass: TonemapPass::new(render_context, surface_format, extent),
+            ui_pass: UIPass::new(render_context, surface_format, extent),
             frame: 0,
             fences: [render_context.create_fence(), render_context.create_fence()],
         }
@@ -116,6 +119,32 @@ impl Pipeline for PathTracingPipeline {
             )],
             std::slice::from_ref(target_signal),
             Some(fence),
+            render_context,
+            bump,
+            camera,
+        );
+
+        self.ui_pass.begin_frame();
+
+        egui::Window::new("Options")
+            .resizable(true)
+            .scroll(true)
+            .show(&self.ui_pass.context(), |ui| {
+                ui.heading("Hello");
+                ui.label("Hello egui!");
+                ui.separator();
+                ui.hyperlink("https://github.com/emilk/egui");
+                ui.separator();
+            });
+
+        self.ui_pass.end_frame();
+
+        self.ui_pass.draw(
+            ui_pass::Input { target },
+            self.frame,
+            &[],
+            &[],
+            None,
             render_context,
             bump,
             camera,

@@ -177,6 +177,7 @@ impl<'a> EncoderInner<'a> {
             extent,
         })
     }
+
     pub fn pipeline_barrier(
         &mut self,
         src: vk::PipelineStageFlags,
@@ -191,6 +192,23 @@ impl<'a> EncoderInner<'a> {
             src_access_mask,
             dst_access_mask,
             image_barriers,
+        });
+    }
+
+    pub fn push_constants<T>(
+        &mut self,
+        layout: &'a PipelineLayout,
+        stages: vk::ShaderStageFlags,
+        offset: u32,
+        data: &'a [T],
+    ) where
+        T: Pod,
+    {
+        self.commands.push(Command::PushConstants {
+            layout,
+            stages,
+            offset,
+            data: bytemuck::cast_slice(data),
         });
     }
 }
@@ -270,5 +288,12 @@ pub enum Command<'a> {
         src_access_mask: vk::AccessFlags,
         dst_access_mask: vk::AccessFlags,
         image_barriers: &'a [ImageMemoryBarrier<'a>],
+    },
+
+    PushConstants {
+        layout: &'a PipelineLayout,
+        stages: vk::ShaderStageFlags,
+        offset: u32,
+        data: &'a [u8],
     },
 }

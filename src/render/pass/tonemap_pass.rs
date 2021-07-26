@@ -18,7 +18,6 @@ use crate::render::{
 use bevy::prelude::GlobalTransform;
 use bumpalo::Bump;
 use erupt::vk;
-use erupt::vk::{PipelineStageFlags, ShaderStageFlags};
 use lru::LruCache;
 use smallvec::smallvec;
 
@@ -39,10 +38,8 @@ pub struct TonemapPass {
     sampler: Sampler,
 
     framebuffers: LruCache<Image, Framebuffer>,
-
-    vertex_shader: Shader,
-    fragment_shader: Shader,
 }
+
 impl Pass<'_> for TonemapPass {
     type Input = Input;
     type Output = Output;
@@ -51,7 +48,7 @@ impl Pass<'_> for TonemapPass {
         &mut self,
         input: Input,
         frame: u64,
-        wait: &[(PipelineStageFlags, Semaphore)],
+        wait: &[(vk::PipelineStageFlags, Semaphore)],
         signal: &[Semaphore],
         fence: Option<&Fence>,
         render_context: &mut RenderContext,
@@ -166,7 +163,7 @@ impl TonemapPass {
                         binding: 0,
                         descriptor_type: DescriptorType::CombinedImageSampler,
                         count: 1,
-                        stages: ShaderStageFlags::FRAGMENT,
+                        stages: vk::ShaderStageFlags::FRAGMENT,
                         flags: vk::DescriptorBindingFlags::empty(),
                     },
                 ],
@@ -247,8 +244,6 @@ impl TonemapPass {
             initial_images: [None, None],
             sampler,
             framebuffers: LruCache::new(4),
-            vertex_shader,
-            fragment_shader,
         }
     }
 }

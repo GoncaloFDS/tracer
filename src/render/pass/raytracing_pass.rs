@@ -25,7 +25,7 @@ use crate::render::{
 };
 use bevy::asset::Handle;
 use bevy::prelude::GlobalTransform;
-use bumpalo::{collections::Vec as BVec, Bump};
+use bumpalo::{collections::Vec as BumpVec, Bump};
 use crevice::std430::{AsStd430, Std430};
 use erupt::vk;
 use glam::{vec3, vec4, Mat4, Vec3};
@@ -86,7 +86,7 @@ impl<'a> Pass<'a> for RayTracingPass {
     ) -> Self::Output {
         let mut encoder = render_context.queue.create_enconder();
 
-        let mut as_instances = BVec::new_in(bump);
+        let mut as_instances = BumpVec::new_in(bump);
 
         for blas in input.blases.values() {
             as_instances.push(
