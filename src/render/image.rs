@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::sync::Arc;
 
+#[derive(Copy, Clone)]
 pub struct ImageInfo {
     pub extent: vk::Extent2D,
     pub format: vk::Format,

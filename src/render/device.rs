@@ -1,3 +1,4 @@
+use crate::render::image::ImageSubresourceLayers;
 use crate::render::{
     acceleration_structures::{
         AccelerationStructureBuildSizesInfo, AccelerationStructureGeometryInfo,
@@ -26,6 +27,7 @@ use crate::render::{
     swapchain::Swapchain,
     util::{align_up, ToErupt},
 };
+use bumpalo::Bump;
 use crevice::internal::bytemuck;
 use crevice::internal::bytemuck::Pod;
 use erupt::{vk, DeviceLoader, ExtendableFromConst, InstanceLoader};
@@ -38,6 +40,16 @@ use std::convert::TryFrom;
 use std::ffi::CString;
 use std::ops::Range;
 use std::sync::Arc;
+
+struct ImageUpload {
+    staging_buffer: Buffer,
+    image: Image,
+    access: vk::ImageAspectFlags,
+    layout: vk::ImageLayout,
+    subresource: ImageSubresourceLayers,
+    offset: vk::Offset3D,
+    extent: vk::Extent3D,
+}
 
 pub struct DeviceInner {
     handle: DeviceLoader,
@@ -59,6 +71,8 @@ pub struct DeviceInner {
     render_passes: Mutex<Slab<vk::RenderPass>>,
     shader_modules: Mutex<Slab<vk::ShaderModule>>,
     acceleration_structures: Mutex<Slab<vk::AccelerationStructureKHR>>,
+
+    image_uploads: Mutex<Slab<ImageUpload>>,
 }
 
 #[derive(Clone)]
@@ -99,6 +113,7 @@ impl Device {
                 render_passes: Mutex::new(Slab::with_capacity(1024)),
                 shader_modules: Mutex::new(Slab::with_capacity(1024)),
                 acceleration_structures: Mutex::new(Slab::with_capacity(1024)),
+                image_uploads: Mutex::new(Slab::with_capacity(1024)),
             }),
         }
     }
@@ -328,6 +343,52 @@ impl Device {
                 )
                 .unwrap();
         }
+    }
+
+    pub fn create_image_with_data<T>(
+        &self,
+        mut info: ImageInfo,
+        layout: vk::ImageLayout,
+        data: &[T],
+    ) -> Image
+    where
+        T: Pod,
+    {
+        info.usage |= vk::ImageUsageFlags::TRANSFER_DST;
+        let subresource =
+            ImageSubresourceLayers::new(vk::ImageAspectFlags::COLOR, 0, 0..info.array_layers);
+        let image = self.create_image(info);
+
+        let staging_buffer = self.create_buffer_with_data(
+            BufferInfo {
+                align: 15,
+                size: std::mem::size_of_val(data) as u64,
+                usage_flags: vk::BufferUsageFlags::TRANSFER_SRC,
+                allocation_flags: gpu_alloc::UsageFlags::HOST_ACCESS
+                    | gpu_alloc::UsageFlags::TRANSIENT,
+            },
+            data,
+        );
+
+        self.inner.image_uploads.lock().insert(ImageUpload {
+            staging_buffer,
+            image: image.clone(),
+            access: vk::ImageAspectFlags::all(),
+            layout,
+            subresource,
+            offset: Default::default(),
+            extent: vk::Extent3D {
+                width: info.extent.width,
+                height: info.extent.height,
+                depth: 1,
+            },
+        });
+
+        image
+    }
+
+    pub fn flush_uploads(&self, bump: &Bump) {
+        let image_uploads = self.inner.image_uploads.lock();
     }
 
     pub fn create_swapchain(&self, surface: &Surface) -> Swapchain {

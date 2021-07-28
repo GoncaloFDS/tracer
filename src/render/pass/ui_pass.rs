@@ -1,6 +1,7 @@
 use crate::render::buffer::BufferInfo;
+use crate::render::descriptor::{Descriptors, WriteDescriptorSet};
 use crate::render::framebuffer::FramebufferInfo;
-use crate::render::image::ImageViewInfo;
+use crate::render::image::{ImageInfo, ImageView, ImageViewInfo};
 use crate::render::pipeline::{PushConstant, VertexInputAttribute, VertexInputBinding};
 use crate::render::render_pass::ClearValue;
 use crate::render::resources::{Buffer, Framebuffer, Sampler};
@@ -28,6 +29,7 @@ use std::sync::Arc;
 pub struct Input {
     pub target: Image,
 }
+
 pub struct Output;
 
 pub struct UIPass {
@@ -43,7 +45,9 @@ pub struct UIPass {
     descriptor_sets: [DescriptorSet; 2],
     vertex_buffers: [Buffer; 2],
     index_buffers: [Buffer; 2],
-    sampler: Sampler,
+
+    font_sampler: Sampler,
+    font_image: Option<Image>,
 
     clipped_meshes: Vec<egui::ClippedMesh>,
     texture_version: u64,
@@ -92,7 +96,7 @@ impl UIPass {
             attachments: smallvec![AttachmentInfo {
                 format: surface_format,
                 samples: vk::SampleCountFlags::_1,
-                load_op: vk::AttachmentLoadOp::CLEAR,
+                load_op: vk::AttachmentLoadOp::DONT_CARE,
                 store_op: vk::AttachmentStoreOp::STORE,
                 initial_layout: None,
                 final_layout: vk::ImageLayout::PRESENT_SRC_KHR,
@@ -214,7 +218,8 @@ impl UIPass {
             descriptor_sets,
             vertex_buffers,
             index_buffers,
-            sampler,
+            font_sampler: sampler,
+            font_image: None,
             clipped_meshes: vec![],
             texture_version: 0,
         }
@@ -241,20 +246,59 @@ impl UIPass {
         self.clipped_meshes = self.egui_context.tessellate(clipped_shapes);
     }
 
-    fn update_set(&mut self) {
+    fn update_set(&mut self, render_context: &mut RenderContext, frame_id: usize) {
         let texture = self.egui_context.texture();
         if texture.version == self.texture_version {
             return;
         }
         self.texture_version = texture.version;
+        let image = self.create_font_texture(texture, render_context);
+        self.font_image = Some(image.clone());
+        let image_view = render_context
+            .create_image_view(ImageViewInfo::new(image, vk::ImageAspectFlags::COLOR));
+        render_context.update_descriptor_sets(
+            &[WriteDescriptorSet {
+                descriptor_set: &self.descriptor_sets[frame_id],
+                binding: 0,
+                element: 0,
+                descriptors: Descriptors::CombinedImageSampler(&[(
+                    image_view,
+                    vk::ImageLayout::GENERAL,
+                    self.font_sampler.clone(),
+                )]),
+            }],
+            &[],
+        )
     }
 
-    fn create_font_texture(&mut self, texture: Arc<epaint::Texture>) {
+    fn create_font_texture(
+        &self,
+        texture: Arc<epaint::Texture>,
+        render_context: &mut RenderContext,
+    ) -> Image {
         let image_data = &texture
             .pixels
             .iter()
             .flat_map(|&r| vec![r, r, r, r])
             .collect::<Vec<_>>();
+
+        let image = render_context.create_image_with_data(
+            ImageInfo {
+                extent: vk::Extent2D {
+                    width: texture.width as u32,
+                    height: texture.height as u32,
+                },
+                format: vk::Format::R8G8B8A8_UNORM,
+                mip_levels: 1,
+                array_layers: 1,
+                samples: vk::SampleCountFlagBits::_1,
+                usage: vk::ImageUsageFlags::SAMPLED,
+            },
+            vk::ImageLayout::GENERAL,
+            image_data,
+        );
+
+        image
     }
 }
 
@@ -293,6 +337,8 @@ impl Pass<'_> for UIPass {
         };
 
         let frame_id = (frame % 2) as usize;
+
+        self.update_set(render_context, frame_id);
 
         let mut encoder = render_context.queue.create_enconder();
 
@@ -343,7 +389,7 @@ impl Pass<'_> for UIPass {
             if let TextureId::User(id) = mesh.texture_id {}
         }
 
-        encoder.draw_indexed(0..0, 0, 0..0);
+        // encoder.draw_indexed(0..0, 0, 0..0);
 
         encoder.end_render_pass();
 
