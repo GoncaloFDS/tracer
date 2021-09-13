@@ -258,7 +258,8 @@ impl Mesh {
         let scratch = device.create_buffer(BufferInfo {
             align: 255,
             size: sizes.build_scratch_size,
-            usage_flags: vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+            usage_flags: vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS
+                | vk::BufferUsageFlags::STORAGE_BUFFER,
             allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS,
         });
 

@@ -299,7 +299,8 @@ impl RayTracingPass {
         let scratch_buffer = render_context.create_buffer(BufferInfo {
             align: 255,
             size: tlas_build_sizes.build_scratch_size,
-            usage_flags: vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+            usage_flags: vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS
+                | vk::BufferUsageFlags::STORAGE_BUFFER,
             allocation_flags: gpu_alloc::UsageFlags::DEVICE_ADDRESS,
         });
 
