@@ -5,6 +5,7 @@ use crate::render::image::{ImageInfo, ImageView, ImageViewInfo};
 use crate::render::pipeline::{PushConstant, VertexInputAttribute, VertexInputBinding};
 use crate::render::render_pass::ClearValue;
 use crate::render::resources::{Buffer, Framebuffer, Sampler};
+use crate::render::vertex::Vertex;
 use crate::render::{
     descriptor::{
         DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
@@ -17,6 +18,7 @@ use crate::render::{
     resources::{DescriptorSet, Fence, GraphicsPipeline, PipelineLayout, RenderPass, Semaphore},
     shader::{Shader, ShaderModuleInfo},
 };
+use bevy::core::AsBytes;
 use bevy::prelude::GlobalTransform;
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use egui::paint::ClippedShape;
@@ -180,14 +182,16 @@ impl UIPass {
             render_context.create_buffer(BufferInfo {
                 align: 255,
                 size: Self::vertex_buffer_size(),
-                usage_flags: vk::BufferUsageFlags::VERTEX_BUFFER,
-                allocation_flags: gpu_alloc::UsageFlags::empty(),
+                usage_flags: vk::BufferUsageFlags::VERTEX_BUFFER
+                    | vk::BufferUsageFlags::TRANSFER_DST,
+                allocation_flags: gpu_alloc::UsageFlags::HOST_ACCESS,
             }),
             render_context.create_buffer(BufferInfo {
                 align: 255,
                 size: Self::vertex_buffer_size(),
-                usage_flags: vk::BufferUsageFlags::VERTEX_BUFFER,
-                allocation_flags: gpu_alloc::UsageFlags::empty(),
+                usage_flags: vk::BufferUsageFlags::VERTEX_BUFFER
+                    | vk::BufferUsageFlags::TRANSFER_DST,
+                allocation_flags: gpu_alloc::UsageFlags::HOST_ACCESS,
             }),
         ];
 
@@ -195,14 +199,16 @@ impl UIPass {
             render_context.create_buffer(BufferInfo {
                 align: 255,
                 size: Self::index_buffer_size(),
-                usage_flags: vk::BufferUsageFlags::INDEX_BUFFER,
-                allocation_flags: gpu_alloc::UsageFlags::empty(),
+                usage_flags: vk::BufferUsageFlags::INDEX_BUFFER
+                    | vk::BufferUsageFlags::TRANSFER_DST,
+                allocation_flags: gpu_alloc::UsageFlags::HOST_ACCESS,
             }),
             render_context.create_buffer(BufferInfo {
                 align: 255,
                 size: Self::index_buffer_size(),
-                usage_flags: vk::BufferUsageFlags::INDEX_BUFFER,
-                allocation_flags: gpu_alloc::UsageFlags::empty(),
+                usage_flags: vk::BufferUsageFlags::INDEX_BUFFER
+                    | vk::BufferUsageFlags::TRANSFER_DST,
+                allocation_flags: gpu_alloc::UsageFlags::HOST_ACCESS,
             }),
         ];
 
@@ -351,10 +357,13 @@ impl Pass<'_> for UIPass {
         encoder.bind_graphics_pipeline(&self.graphics_pipeline);
 
         let mut to_bind = BumpVec::with_capacity_in(self.vertex_buffers.len(), bump);
+        let mut vertex_buffer = self.vertex_buffers[frame_id].clone();
+
         to_bind.push((self.vertex_buffers[frame_id].clone(), 0));
 
         encoder.bind_vertex_buffers(0, to_bind.into_bump_slice());
 
+        let mut index_buffer = self.index_buffers[frame_id].clone();
         encoder.bind_index_buffer(
             bump.alloc(self.index_buffers[frame_id].clone()),
             0,
@@ -370,11 +379,6 @@ impl Pass<'_> for UIPass {
             max_depth: 1.0,
         });
 
-        encoder.set_scissor(vk::Rect2D {
-            offset: vk::Offset2D { x: 0, y: 0 },
-            extent: framebuffer.info().extent,
-        });
-
         let width = framebuffer.info().extent.width as f32;
         let height = framebuffer.info().extent.height as f32;
         let push = [width, height];
@@ -385,11 +389,72 @@ impl Pass<'_> for UIPass {
             &push,
         );
 
+        // render meshes
+        let mut vertex_base = 0;
+        let mut index_base = 0;
+        let mut vertex_offset = 0;
+        let mut index_offset = 0;
         for ClippedMesh(rect, mesh) in &self.clipped_meshes {
-            if let TextureId::User(id) = mesh.texture_id {}
-        }
+            if let TextureId::User(id) = mesh.texture_id {
+                unimplemented!()
+            } else {
+                encoder.bind_descriptor_sets(
+                    vk::PipelineBindPoint::GRAPHICS,
+                    &self.pipeline_layout,
+                    0,
+                    std::slice::from_ref(&self.descriptor_sets[frame_id]),
+                    &[],
+                )
+            }
 
-        // encoder.draw_indexed(0..0, 0, 0..0);
+            if mesh.vertices.is_empty() || mesh.indices.is_empty() {
+                continue;
+            }
+
+            let vertices = mesh
+                .vertices
+                .iter()
+                .map(|v| Vertex {
+                    pos: v.pos,
+                    uv: v.uv,
+                    color: v.color,
+                })
+                .collect::<Vec<Vertex>>();
+
+            render_context.write_buffer(&mut vertex_buffer, vertex_offset as _, &vertices);
+            render_context.write_buffer(&mut index_buffer, index_offset as _, &mesh.indices);
+
+            let v_slice = &mesh.vertices;
+            let v_size = std::mem::size_of_val(&[v_slice[0]]);
+            let v_copy_size = v_slice.len() * v_size;
+
+            let i_slice = &mesh.indices;
+            let i_size = std::mem::size_of_val(&i_slice[0]);
+            let i_copy_size = i_slice.len() * i_size;
+
+            vertex_offset += v_copy_size;
+            index_offset += i_copy_size;
+
+            encoder.set_scissor(vk::Rect2D {
+                offset: vk::Offset2D {
+                    x: rect.min.x.round() as i32,
+                    y: rect.min.y.round() as i32,
+                },
+                extent: vk::Extent2D {
+                    width: (rect.max.x.round() - rect.min.x) as u32,
+                    height: (rect.max.y.round() - rect.min.y) as u32,
+                },
+            });
+
+            encoder.draw_indexed(
+                index_base..index_base + mesh.indices.len() as u32,
+                vertex_base as i32,
+                0..1,
+            );
+
+            vertex_base += mesh.vertices.len() as u32;
+            index_base += mesh.indices.len() as u32;
+        }
 
         encoder.end_render_pass();
 

@@ -1,3 +1,25 @@
+use egui::{Color32, Pos2};
+
+// Todo: Implement Pos and Color instead of using types
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Vertex {
+    /// Logical pixel coordinates (points).
+    /// (0,0) is the top left corner of the screen.
+    pub pos: Pos2, // 64 bit
+
+    /// Normalized texture coordinates.
+    /// (0, 0) is the top left corner of the texture.
+    /// (1, 1) is the bottom right corner of the texture.
+    pub uv: Pos2, // 64 bit
+
+    /// sRGBA with premultiplied alpha
+    pub color: Color32, // 32 bit
+}
+
+unsafe impl bytemuck::Zeroable for Vertex {}
+unsafe impl bytemuck::Pod for Vertex {}
+
 #[derive(Copy, Clone, Debug)]
 pub enum PrimitiveTopology {
     PointList,

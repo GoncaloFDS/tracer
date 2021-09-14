@@ -848,7 +848,10 @@ impl Device {
                         | vk::ColorComponentFlags::G
                         | vk::ColorComponentFlags::B
                         | vk::ColorComponentFlags::A,
-                )];
+                )
+                .blend_enable(true)
+                .src_color_blend_factor(vk::BlendFactor::ONE)
+                .dst_color_blend_factor(vk::BlendFactor::ONE_MINUS_SRC_ALPHA)];
             color_blend_info = vk::PipelineColorBlendStateCreateInfoBuilder::new()
                 .attachments(&color_blend_attachments);
             multisample_info = vk::PipelineMultisampleStateCreateInfoBuilder::new()

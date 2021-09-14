@@ -260,7 +260,7 @@ impl CommandBuffer {
             device.cmd_draw_indexed(
                 self.handle,
                 indices.end - indices.start,
-                instances.end - indices.start,
+                instances.end - instances.start,
                 indices.start,
                 vertex_offset,
                 instances.start,
